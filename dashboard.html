@@ -271,19 +271,45 @@
             color: #991b1b;
         }
         
-        .instructions {
-            background: #eff6ff;
-            border-left: 4px solid #3b82f6;
-            padding: 15px 20px;
-            border-radius: 8px;
-            margin-top: 15px;
-            font-size: 0.9rem;
-            color: #1e40af;
+        .tooltip {
+            position: relative;
+            display: inline-block;
         }
         
-        .instructions strong {
-            display: block;
-            margin-bottom: 8px;
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 300px;
+            background-color: #1e293b;
+            color: #fff;
+            text-align: left;
+            border-radius: 8px;
+            padding: 12px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -150px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .tooltip .tooltiptext::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #1e293b transparent transparent transparent;
+        }
+        
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
         }
 
         /* Footer */
@@ -308,11 +334,11 @@
 
         .modal-content {
             background-color: white;
-            margin: 5% auto;
-            padding: 20px;
+            margin: 3% auto;
+            padding: 30px;
             border-radius: 12px;
-            width: 80%;
-            max-width: 600px;
+            width: 90%;
+            max-width: 900px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.3);
             position: relative;
         }
@@ -344,7 +370,7 @@
 
         .modal-chart-container {
             position: relative;
-            height: 400px;
+            height: 500px;
             margin-bottom: 20px;
         }
 
@@ -365,14 +391,17 @@
         
         <div class="upload-section">
             <div class="file-input-wrapper">
-                <label for="excelFile" class="upload-btn">📁 Load Excel File</label>
+                <div class="tooltip">
+                    <label for="excelFile" class="upload-btn">📁 Load Excel File</label>
+                    <span class="tooltiptext">
+                        <strong>Excel File Format (One row per employee per day):</strong><br>
+                        <strong>Sheet Name:</strong> "Shipments"<br>
+                        <strong>Columns:</strong> Date, TTM, Customer, Boxes Picked, Pallets Picked, Errors, ft², Accuracy
+                    </span>
+                </div>
                 <input type="file" id="excelFile" accept=".xlsx,.xls" onchange="handleFileUpload(event)">
             </div>
             <div class="file-info" id="fileInfo">No file loaded. Using sample data.</div>
-            <div class="instructions">
-                <strong>Excel File Format (One row per employee per day):</strong>
-                Columns: Date, TTM, Customer, Boxes Picked, Pallets Picked, Errors, ft², Accuracy
-            </div>
         </div>
         
         <div class="filter-section">
@@ -549,9 +578,14 @@
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
-                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    //const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, {range: 1});// Start parsing from the second row (index 1)
+                    
+                    // Look for the "Shipments" sheet specifically
+                    const shipmentsSheet = workbook.Sheets['Shipments'];
+                    if (!shipmentsSheet) {
+                        throw new Error('Sheet "Shipments" not found. Please ensure your Excel file has a sheet named "Shipments".');
+                    }
+                    
+                    const jsonData = XLSX.utils.sheet_to_json(shipmentsSheet, {range: 1});// Start parsing from the second row (index 1)
                     
                     console.log('Sample row from Excel:', jsonData[0]);
                     console.log('Column names detected:', Object.keys(jsonData[0] || {}));
@@ -1118,26 +1152,45 @@
                 }
             });
             
-            // Sort customers by volume and get top 10
+            // Sort customers by volume and get top 14
             const sortedCustomers = Object.keys(customerData)
-                .sort((a, b) => customerData[b] - customerData[a])
-                .slice(0, 10);
+                .sort((a, b) => customerData[b] - customerData[a]);
+            
+            const top14Customers = sortedCustomers.slice(0, 14);
+            const otherCustomers = sortedCustomers.slice(14);
             
             const totalSqft = Object.values(customerData).reduce((sum, val) => sum + val, 0);
             
+            // Calculate "Other" total
+            const otherTotal = otherCustomers.reduce((sum, customer) => sum + customerData[customer], 0);
+            
             // Create pie chart data
-            const pieData = sortedCustomers.map(customer => ({
+            const pieData = top14Customers.map(customer => ({
                 label: customer,
                 value: customerData[customer],
                 percentage: ((customerData[customer] / totalSqft) * 100).toFixed(1)
             }));
             
+            // Add "Other" category if there are additional customers
+            if (otherTotal > 0) {
+                pieData.push({
+                    label: 'Other',
+                    value: otherTotal,
+                    percentage: ((otherTotal / totalSqft) * 100).toFixed(1)
+                });
+            }
+            
             // Update summary
+            const topCustomer = pieData[0];
+            const otherCategory = pieData.find(item => item.label === 'Other');
+            const individualCustomers = pieData.filter(item => item.label !== 'Other').length;
+            
             modalSummary.innerHTML = `
                 <strong>Summary for ${dayName}:</strong><br>
                 Total ft²: ${totalSqft.toLocaleString()}<br>
-                Top Customer: ${pieData[0] ? pieData[0].label : 'N/A'} (${pieData[0] ? pieData[0].percentage : '0'}%)<br>
-                Number of Customers: ${Object.keys(customerData).length}
+                Top Customer: ${topCustomer ? topCustomer.label : 'N/A'} (${topCustomer ? topCustomer.percentage : '0'}%)<br>
+                Individual Customers Shown: ${individualCustomers}<br>
+                ${otherCategory ? `Other Customers: ${otherCategory.percentage}%` : ''}
             `;
             
             // Create pie chart
@@ -1147,7 +1200,9 @@
             
             const colors = [
                 '#3b82f6', '#a855f7', '#10b981', '#f59e0b', '#ef4444', 
-                '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#84cc16'
+                '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#84cc16',
+                '#06b6d4', '#8b5a2b', '#dc2626', '#7c3aed', '#059669',
+                '#6b7280'  // Gray color for "Other" category
             ];
             
             customerModalChart = new Chart(document.getElementById('customerPieChart'), {
