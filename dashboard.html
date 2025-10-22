@@ -394,9 +394,10 @@
                 <div class="tooltip">
                     <label for="excelFile" class="upload-btn">📁 Load Excel File</label>
                     <span class="tooltiptext">
-                        <strong>Excel File Format (One row per employee per day):</strong><br>
-                        <strong>Sheet Name:</strong> "Shipments"<br>
-                        <strong>Columns:</strong> Date, TTM, Customer, Boxes Picked, Pallets Picked, Errors, ft², Accuracy
+                        <strong>Excel File Format:</strong><br>
+                        <strong>Sheet "Shipments":</strong> Date, TTM, Customer, Boxes Picked, Pallets Picked, ft²<br>
+                        <strong>Sheet "Errors":</strong> Date, TTM<br>
+                        (Accuracy calculated as: error count / shipment count)
                     </span>
                 </div>
                 <input type="file" id="excelFile" accept=".xlsx,.xls" onchange="handleFileUpload(event)">
@@ -540,6 +541,7 @@
     <script>
         let charts = {};
         let allData = [];
+        let allErrors = [];
         let currentPeriod = 'daily';
         let customerModalChart = null;
         
@@ -556,22 +558,49 @@
                 date.setDate(date.getDate() - i);
                 
                 employees.forEach(emp => {
-                    data.push({
-                        date: date.toISOString().split('T')[0],
-                        name: emp,
-                        customer: customers[Math.floor(Math.random() * customers.length)],
-                        boxes: Math.floor(Math.random() * 100) + 200,
-                        pallets: Math.floor(Math.random() * 10) + 10,
-                        errors: Math.floor(Math.random() * 3),
-                        sqft: Math.floor(Math.random() * 1000) + 2000,
-                        accuracy: Math.floor(Math.random() * 5) + 94
-                    });
+                    // Each employee has multiple shipment lines per day
+                    const numShipments = Math.floor(Math.random() * 3) + 2; // 2-4 shipments per day
+                    for (let j = 0; j < numShipments; j++) {
+                        data.push({
+                            date: date.toISOString().split('T')[0],
+                            name: emp,
+                            customer: customers[Math.floor(Math.random() * customers.length)],
+                            boxes: Math.floor(Math.random() * 50) + 50,
+                            pallets: Math.floor(Math.random() * 5) + 3,
+                            sqft: Math.floor(Math.random() * 500) + 500
+                        });
+                    }
                 });
             }
             return data;
         }
         
+        function generateSampleErrors() {
+            const employees = ['John M.', 'Sarah K.', 'Mike R.', 'Lisa P.', 'David L.', 'Emma W.'];
+            const errors = [];
+            const today = new Date();
+            
+            // Generate 30 days of errors (roughly 2-5% error rate)
+            for (let i = 29; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                
+                employees.forEach(emp => {
+                    // Random number of errors per day (0-2)
+                    const numErrors = Math.random() < 0.7 ? Math.floor(Math.random() * 2) : Math.floor(Math.random() * 3);
+                    for (let j = 0; j < numErrors; j++) {
+                        errors.push({
+                            date: date.toISOString().split('T')[0],
+                            name: emp
+                        });
+                    }
+                });
+            }
+            return errors;
+        }
+        
         allData = generateSampleData();
+        allErrors = generateSampleErrors();
         
         function handleFileUpload(event) {
             const file = event.target.files[0];
@@ -591,7 +620,14 @@
                         throw new Error('Sheet "Shipments" not found. Please ensure your Excel file has a sheet named "Shipments".');
                     }
                     
+                    // Look for the "Errors" sheet
+                    const errorsSheet = workbook.Sheets['Errors'];
+                    if (!errorsSheet) {
+                        throw new Error('Sheet "Errors" not found. Please ensure your Excel file has a sheet named "Errors".');
+                    }
+                    
                     const jsonData = XLSX.utils.sheet_to_json(shipmentsSheet, {range: 1});// Start parsing from the second row (index 1)
+                    const errorsData = XLSX.utils.sheet_to_json(errorsSheet, {range: 1});
                     
                     console.log('Sample row from Excel:', jsonData[0]);
                     console.log('Column names detected:', Object.keys(jsonData[0] || {}));
@@ -620,14 +656,37 @@
                             customer: row['Customer'] || row['customer'] || row['CUSTOMER'] || 'Unknown',
                             boxes: parseInt(row['Boxes Picked'] || row['boxes'] || row['BOXES'] || 0),
                             pallets: parseInt(row['Pallets Picked'] || row['pallets'] || row['PALLETS'] || 0),
-                            errors: parseInt(row['Errors'] || row['errors'] || row['ERRORS'] || 0),
-                            sqft: parseInt(row['ft²'] || row['sqft'] || row['Square Footage'] || row['SQFT'] || row['Sq Ft'] || 0),
-                            accuracy: parseInt(row['Accuracy'] || row['accuracy'] || row['ACCURACY'] || row['Efficiency'] || row['efficiency'] || 0)
+                            sqft: parseInt(row['ft²'] || row['sqft'] || row['Square Footage'] || row['SQFT'] || row['Sq Ft'] || 0)
                         };
                     });
                     
+                    // Process errors data
+                    allErrors = errorsData.map(row => {
+                        let dateValue = row['Date'] || row['date'] || row['DATE'];
+                        
+                        // Handle Excel date serial numbers
+                        if (typeof dateValue === 'number') {
+                            const excelEpoch = new Date(1899, 11, 30);
+                            const date = new Date(excelEpoch.getTime() + dateValue * 86400000);
+                            dateValue = date.toISOString().split('T')[0];
+                        } else if (dateValue instanceof Date) {
+                            dateValue = dateValue.toISOString().split('T')[0];
+                        } else if (typeof dateValue === 'string') {
+                            const parsed = new Date(dateValue);
+                            if (!isNaN(parsed.getTime())) {
+                                dateValue = parsed.toISOString().split('T')[0];
+                            }
+                        }
+                        
+                        return {
+                            date: dateValue,
+                            name: row['TTM'] || row['Employee'] || row['Name'] || row['employee'] || row['name'] || 'Unknown'
+                        };
+                    }).filter(row => row.name.toLowerCase() !== 'ignore');
+                    
                     console.log('Processed data sample:', allData[0]);
-                    console.log('Total records:', allData.length);
+                    console.log('Total shipment records:', allData.length);
+                    console.log('Total error records:', allErrors.length);
                     
                     // Set date range based on data
                     const dates = allData.map(d => d.date).filter(d => d).sort();
@@ -640,7 +699,7 @@
                         document.getElementById('endDate').value = '';
                     }
                     
-                    document.getElementById('fileInfo').textContent = `✓ Loaded ${file.name} - ${allData.length} records`;
+                    document.getElementById('fileInfo').textContent = `✓ Loaded ${file.name} - ${allData.length} shipment records, ${allErrors.length} error records`;
                     updateDashboard();
                 } catch (error) {
                     document.getElementById('fileInfo').textContent = `❌ Error: ${error.message}`;
@@ -684,7 +743,63 @@
             return filtered;
         }
         
-        function aggregateByPeriod(data) {
+        function getFilteredErrors() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            // If no date filters are set, return all errors
+            if (!startDate && !endDate) {
+                return allErrors;
+            }
+            
+            let filtered = allErrors;
+            
+            if (startDate) {
+                filtered = filtered.filter(d => d.date && d.date >= startDate);
+            }
+            if (endDate) {
+                filtered = filtered.filter(d => d.date && d.date <= endDate);
+            }
+            
+            return filtered;
+        }
+        
+        function calculateErrorsAndAccuracy(filteredShipments, filteredErrors) {
+            // Count errors by TTM
+            const errorsByTTM = {};
+            filteredErrors.forEach(error => {
+                if (!errorsByTTM[error.name]) {
+                    errorsByTTM[error.name] = 0;
+                }
+                errorsByTTM[error.name]++;
+            });
+            
+            // Count shipment lines by TTM
+            const shipmentsByTTM = {};
+            filteredShipments.forEach(shipment => {
+                if (!shipmentsByTTM[shipment.name]) {
+                    shipmentsByTTM[shipment.name] = 0;
+                }
+                shipmentsByTTM[shipment.name]++;
+            });
+            
+            // Calculate accuracy for each TTM
+            const accuracyByTTM = {};
+            Object.keys(shipmentsByTTM).forEach(name => {
+                const errorCount = errorsByTTM[name] || 0;
+                const shipmentCount = shipmentsByTTM[name] || 1;
+                // Accuracy as percentage: (errors / shipments) * 100
+                accuracyByTTM[name] = ((errorCount / shipmentCount) * 100).toFixed(2);
+            });
+            
+            return {
+                errorsByTTM,
+                shipmentsByTTM,
+                accuracyByTTM
+            };
+        }
+        
+        function aggregateByPeriod(data, errorStats) {
             const grouped = {};
             
             data.forEach(row => {
@@ -706,25 +821,15 @@
                         name: row.name,
                         boxes: 0,
                         pallets: 0,
-                        errors: 0,
                         sqft: 0,
-                        accuracy: [],
                         days: 0
                     };
                 }
                 
                 grouped[key].boxes += row.boxes;
                 grouped[key].pallets += row.pallets;
-                grouped[key].errors += row.errors;
                 grouped[key].sqft += row.sqft;
-                grouped[key].accuracy.push(row.accuracy);
                 grouped[key].days++;
-            });
-            
-            // Calculate average accuracy
-            Object.keys(grouped).forEach(key => {
-                const accArray = grouped[key].accuracy;
-                grouped[key].accuracy = Math.round(accArray.reduce((a, b) => a + b, 0) / accArray.length);
             });
             
             // Aggregate by employee
@@ -735,24 +840,24 @@
                         name: item.name,
                         boxes: 0,
                         pallets: 0,
-                        errors: 0,
                         sqft: 0,
-                        accuracy: [],
-                        days: 0
+                        days: 0,
+                        errors: 0,
+                        accuracy: 0,
+                        linesShipped: 0
                     };
                 }
                 byEmployee[item.name].boxes += item.boxes;
                 byEmployee[item.name].pallets += item.pallets;
-                byEmployee[item.name].errors += item.errors;
                 byEmployee[item.name].sqft += item.sqft;
-                byEmployee[item.name].accuracy.push(item.accuracy);
                 byEmployee[item.name].days += item.days;
             });
             
-            // Calculate average accuracy per employee
+            // Add error counts, accuracy, and shipment counts from errorStats
             Object.keys(byEmployee).forEach(name => {
-                const accArray = byEmployee[name].accuracy;
-                byEmployee[name].accuracy = Math.round(accArray.reduce((a, b) => a + b, 0) / accArray.length);
+                byEmployee[name].errors = errorStats.errorsByTTM[name] || 0;
+                byEmployee[name].accuracy = parseFloat(errorStats.accuracyByTTM[name]) || 0;
+                byEmployee[name].linesShipped = errorStats.shipmentsByTTM[name] || 0;
             });
             
             return Object.values(byEmployee);
@@ -760,10 +865,13 @@
         
         function updateDashboard() {
             const filteredData = getFilteredData();
+            const filteredErrors = getFilteredErrors();
             console.log('Filtered data:', filteredData.length, 'records');
+            console.log('Filtered errors:', filteredErrors.length, 'records');
             console.log('Sample filtered record:', filteredData[0]);
             
-            const aggregatedData = aggregateByPeriod(filteredData);
+            const errorStats = calculateErrorsAndAccuracy(filteredData, filteredErrors);
+            const aggregatedData = aggregateByPeriod(filteredData, errorStats);
             console.log('Aggregated data:', aggregatedData.length, 'employees');
             console.log('Sample aggregated record:', aggregatedData[0]);
             
@@ -777,8 +885,9 @@
             const totalPallets = data.reduce((sum, emp) => sum + emp.pallets, 0);
             const totalErrors = data.reduce((sum, emp) => sum + emp.errors, 0);
             const totalSqft = data.reduce((sum, emp) => sum + emp.sqft, 0);
-            const avgAccuracy = (data.reduce((sum, emp) => sum + emp.accuracy, 0) / data.length).toFixed(1);
-            const errorRate = ((totalErrors / totalBoxes) * 100).toFixed(2);
+            const totalLinesShipped = data.reduce((sum, emp) => sum + emp.linesShipped, 0);
+            const avgAccuracy = (data.reduce((sum, emp) => sum + emp.accuracy, 0) / data.length).toFixed(2);
+            const errorRate = totalLinesShipped > 0 ? ((totalErrors / totalLinesShipped) * 100).toFixed(2) : '0.00';
             
             const startDate = document.getElementById('startDate').value || 'All';
             const endDate = document.getElementById('endDate').value || 'All';
@@ -1098,14 +1207,16 @@
             
             sortedData.forEach(emp => {
                 const row = tbody.insertRow();
+                // Accuracy is now error rate - lower is better
+                const accuracyBadge = emp.accuracy <= 3 ? 'green' : emp.accuracy <= 5 ? 'yellow' : 'red';
                 row.innerHTML = `
                     <td><strong>${emp.name}</strong></td>
                     <td>${emp.boxes.toLocaleString()}</td>
                     <td>${emp.pallets}</td>
                     <td><span class="badge ${emp.errors <= 2 ? 'green' : emp.errors <= 5 ? 'yellow' : 'red'}">${emp.errors}</span></td>
                     <td>${emp.sqft.toLocaleString()}</td>
-                    <td><span class="badge ${emp.accuracy >= 97 ? 'green' : emp.accuracy >= 95 ? 'yellow' : 'red'}">${emp.accuracy}%</span></td>
-                    <td>${emp.days}</td>
+                    <td><span class="badge ${accuracyBadge}">${emp.accuracy.toFixed(2)}%</span></td>
+                    <td>${emp.linesShipped}</td>
                 `;
             });
             
@@ -1114,8 +1225,8 @@
             const totalPallets = sortedData.reduce((sum, emp) => sum + emp.pallets, 0);
             const totalErrors = sortedData.reduce((sum, emp) => sum + emp.errors, 0);
             const totalSqft = sortedData.reduce((sum, emp) => sum + emp.sqft, 0);
-            const avgAccuracy = (sortedData.reduce((sum, emp) => sum + emp.accuracy, 0) / sortedData.length).toFixed(1);
-            const totalDays = sortedData.reduce((sum, emp) => sum + emp.days, 0);
+            const avgAccuracy = (sortedData.reduce((sum, emp) => sum + emp.accuracy, 0) / sortedData.length).toFixed(2);
+            const totalLinesShipped = sortedData.reduce((sum, emp) => sum + emp.linesShipped, 0);
             
             const totalRow = tbody.insertRow();
             totalRow.style.background = '#f1f5f9';
@@ -1127,7 +1238,7 @@
                 <td>${totalErrors}</td>
                 <td>${totalSqft.toLocaleString()}</td>
                 <td>${avgAccuracy}%</td>
-                <td>${totalDays}</td>
+                <td>${totalLinesShipped}</td>
             `;
         }
         
