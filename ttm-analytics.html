@@ -143,9 +143,100 @@
             margin-bottom: 20px;
         }
         
+        .chart-content {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        
+        .ttm-selector {
+            flex-shrink: 0;
+            width: 220px;
+            max-height: 600px;
+            overflow-y: auto;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f8fafc;
+        }
+        
+        .ttm-selector h4 {
+            margin-bottom: 15px;
+            color: #1e293b;
+            font-size: 1rem;
+            border-bottom: 2px solid #cbd5e1;
+            padding-bottom: 8px;
+        }
+        
+        .ttm-checkbox {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        
+        .ttm-checkbox:hover {
+            background: #e2e8f0;
+        }
+        
+        .ttm-checkbox input[type="checkbox"] {
+            margin-right: 8px;
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+        
+        .ttm-checkbox label {
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #475569;
+            user-select: none;
+        }
+        
+        .select-all-container {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #cbd5e1;
+        }
+        
+        .select-all-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            margin-right: 5px;
+            transition: background 0.2s;
+        }
+        
+        .select-all-btn:hover {
+            background: #2563eb;
+        }
+        
+        .deselect-all-btn {
+            background: #64748b;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: background 0.2s;
+        }
+        
+        .deselect-all-btn:hover {
+            background: #475569;
+        }
+        
         .chart-container {
             position: relative;
             height: 600px;
+            flex-grow: 1;
         }
         
         footer {
@@ -231,8 +322,18 @@
         
         <div class="chart-card">
             <h3 class="chart-title">TTM ft² Picked vs Median (Excluding values below 2,000 ft²)</h3>
-            <div class="chart-container">
-                <canvas id="ttmChart"></canvas>
+            <div class="chart-content">
+                <div class="ttm-selector">
+                    <h4>Select TTMs</h4>
+                    <div class="select-all-container">
+                        <button class="select-all-btn" onclick="selectAllTTMs()">Select All</button>
+                        <button class="deselect-all-btn" onclick="deselectAllTTMs()">Deselect All</button>
+                    </div>
+                    <div id="ttmCheckboxes"></div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="ttmChart"></canvas>
+                </div>
             </div>
         </div>
 
@@ -244,6 +345,7 @@
     <script>
         let allData = [];
         let ttmChart = null;
+        let selectedTTMs = new Set();
         
         // Sample data with dates
         function generateSampleData() {
@@ -364,7 +466,81 @@
             return filtered;
         }
         
+        function populateTTMCheckboxes() {
+            const filteredData = getFilteredData();
+            
+            // Get unique TTM names
+            const ttmData = {};
+            filteredData.forEach(row => {
+                if (!ttmData[row.name]) {
+                    ttmData[row.name] = 0;
+                }
+                ttmData[row.name] += row.sqft;
+            });
+            
+            const ttmNames = Object.keys(ttmData).sort((a, b) => a.localeCompare(b));
+            
+            // If this is the first time or all TTMs were selected, select all
+            if (selectedTTMs.size === 0) {
+                ttmNames.forEach(name => selectedTTMs.add(name));
+            }
+            
+            // Create checkboxes
+            const container = document.getElementById('ttmCheckboxes');
+            container.innerHTML = '';
+            
+            ttmNames.forEach(name => {
+                const div = document.createElement('div');
+                div.className = 'ttm-checkbox';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `ttm-${name.replace(/\s+/g, '-')}`;
+                checkbox.value = name;
+                checkbox.checked = selectedTTMs.has(name);
+                checkbox.onchange = function() {
+                    if (this.checked) {
+                        selectedTTMs.add(name);
+                    } else {
+                        selectedTTMs.delete(name);
+                    }
+                    updateChart();
+                };
+                
+                const label = document.createElement('label');
+                label.htmlFor = checkbox.id;
+                label.textContent = name;
+                
+                div.appendChild(checkbox);
+                div.appendChild(label);
+                container.appendChild(div);
+            });
+        }
+        
+        function selectAllTTMs() {
+            const checkboxes = document.querySelectorAll('#ttmCheckboxes input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                cb.checked = true;
+                selectedTTMs.add(cb.value);
+            });
+            updateChart();
+        }
+        
+        function deselectAllTTMs() {
+            const checkboxes = document.querySelectorAll('#ttmCheckboxes input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+                selectedTTMs.delete(cb.value);
+            });
+            updateChart();
+        }
+        
         function updateAnalytics() {
+            populateTTMCheckboxes();
+            updateChart();
+        }
+        
+        function updateChart() {
             const filteredData = getFilteredData();
             
             // Aggregate ft² by TTM
@@ -377,12 +553,15 @@
             });
             
             // Convert to array and sort alphabetically
-            const ttmArray = Object.keys(ttmData).map(name => ({
+            let ttmArray = Object.keys(ttmData).map(name => ({
                 name: name,
                 sqft: ttmData[name]
             })).sort((a, b) => a.name.localeCompare(b.name));
             
-            // Calculate median (excluding values below 2000)
+            // Filter to only show selected TTMs
+            ttmArray = ttmArray.filter(item => selectedTTMs.has(item.name));
+            
+            // Calculate median ONLY from selected TTMs (excluding values below 2000)
             const validSqftValues = ttmArray
                 .map(item => item.sqft)
                 .filter(sqft => sqft >= 2000)
