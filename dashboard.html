@@ -1035,7 +1035,9 @@
             const totalErrors = data.reduce((sum, emp) => sum + emp.errors, 0);
             const totalSqft = data.reduce((sum, emp) => sum + emp.sqft, 0);
             const totalLinesShipped = data.reduce((sum, emp) => sum + emp.linesShipped, 0);
-            const avgAccuracy = (data.reduce((sum, emp) => sum + emp.accuracy, 0) / data.length).toFixed(2);
+            // Calculate average error rate then convert to accuracy rate (100 - error rate)
+            const avgErrorRate = data.reduce((sum, emp) => sum + parseFloat(emp.accuracy), 0) / data.length;
+            const avgAccuracy = (100 - avgErrorRate).toFixed(2);
             const errorRate = totalLinesShipped > 0 ? ((totalErrors / totalLinesShipped) * 100).toFixed(2) : '0.00';
             
             const startDate = document.getElementById('startDate').value || 'All';
@@ -1356,15 +1358,18 @@
             
             sortedData.forEach(emp => {
                 const row = tbody.insertRow();
-                // Accuracy is now error rate - lower is better
-                const accuracyBadge = emp.accuracy <= 3 ? 'green' : emp.accuracy <= 5 ? 'yellow' : 'red';
+                // Convert error rate to accuracy rate: 100 - error rate
+                const errorRate = parseFloat(emp.accuracy);
+                const accuracyRate = 100 - errorRate;
+                // Higher accuracy is better
+                const accuracyBadge = accuracyRate >= 97 ? 'green' : accuracyRate >= 95 ? 'yellow' : 'red';
                 row.innerHTML = `
                     <td><strong>${emp.name}</strong></td>
                     <td>${emp.boxes.toLocaleString()}</td>
                     <td>${emp.pallets}</td>
                     <td><span class="badge ${emp.errors <= 2 ? 'green' : emp.errors <= 5 ? 'yellow' : 'red'}">${emp.errors}</span></td>
                     <td>${emp.sqft.toLocaleString()}</td>
-                    <td><span class="badge ${accuracyBadge}">${emp.accuracy.toFixed(2)}%</span></td>
+                    <td><span class="badge ${accuracyBadge}">${accuracyRate.toFixed(2)}%</span></td>
                     <td>${emp.linesShipped}</td>
                 `;
             });
@@ -1374,7 +1379,9 @@
             const totalPallets = sortedData.reduce((sum, emp) => sum + emp.pallets, 0);
             const totalErrors = sortedData.reduce((sum, emp) => sum + emp.errors, 0);
             const totalSqft = sortedData.reduce((sum, emp) => sum + emp.sqft, 0);
-            const avgAccuracy = (sortedData.reduce((sum, emp) => sum + emp.accuracy, 0) / sortedData.length).toFixed(2);
+            // Calculate average error rate then convert to accuracy rate
+            const avgErrorRate = sortedData.reduce((sum, emp) => sum + parseFloat(emp.accuracy), 0) / sortedData.length;
+            const avgAccuracy = (100 - avgErrorRate).toFixed(2);
             const totalLinesShipped = sortedData.reduce((sum, emp) => sum + emp.linesShipped, 0);
             
             const totalRow = tbody.insertRow();
