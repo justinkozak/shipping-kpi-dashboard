@@ -734,14 +734,25 @@
                         console.log('First mapped error:', mappedErrors[0]);
                     }
                     
-                    allErrors = mappedErrors.filter(row => row.name.toLowerCase() !== 'ignore');
+                    // Filter out "ignore" rows AND rows with invalid dates (like header rows)
+                    allErrors = mappedErrors.filter(row => {
+                        const nameValid = row.name && row.name.toLowerCase() !== 'ignore';
+                        const dateValid = row.date && row.date !== 'undefined' && 
+                                         !row.date.toLowerCase().includes('auto') &&
+                                         !row.date.toLowerCase().includes('date') &&
+                                         row.date.match(/\d{4}-\d{2}-\d{2}/); // Must be in YYYY-MM-DD format
+                        
+                        return nameValid && dateValid;
+                    });
                     
-                    console.log('After filtering "ignore":', allErrors.length);
+                    console.log('After filtering "ignore" and invalid dates:', allErrors.length);
                     if (allErrors.length > 0) {
                         console.log('First error after filter:', allErrors[0]);
+                        console.log('Last error after filter:', allErrors[allErrors.length - 1]);
                     } else {
                         console.warn('WARNING: All error rows were filtered out or no errors exist!');
                         console.log('Check if all TTM names are "ignore" or if the TTM column name is incorrect');
+                        console.log('Mapped errors before filtering:', mappedErrors.slice(0, 5));
                     }
                     
                     console.log('Processed data sample:', allData[0]);
