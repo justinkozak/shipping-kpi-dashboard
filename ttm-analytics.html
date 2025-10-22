@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="copyright" content="© 2025 Justin A.F.D. Kozak">
+    <meta name="license" content="MIT License">
+    <title>TTM Performance Analytics</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            color: #64748b;
+            font-size: 1.1rem;
+        }
+        
+        .nav-link {
+            display: inline-block;
+            margin-top: 10px;
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+        
+        .nav-link:hover {
+            color: #2563eb;
+            text-decoration: underline;
+        }
+        
+        .upload-section {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .upload-btn {
+            background: #3b82f6;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 8px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .upload-btn:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+        
+        .file-info {
+            margin-top: 15px;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+        
+        .filter-section {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .filter-label {
+            font-weight: 600;
+            color: #475569;
+        }
+        
+        .date-range {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .date-range input {
+            padding: 8px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        
+        .chart-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .chart-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 20px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 600px;
+        }
+        
+        footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+        
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 300px;
+            background-color: #1e293b;
+            color: #fff;
+            text-align: left;
+            border-radius: 8px;
+            padding: 12px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -150px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .tooltip .tooltiptext::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #1e293b transparent transparent transparent;
+        }
+        
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>TTM Performance Analytics</h1>
+            <p class="subtitle">Team Member ft² Performance vs Median</p>
+            <a href="dashboard.html" class="nav-link">← Back to Main Dashboard</a>
+        </header>
+        
+        <div class="upload-section">
+            <div class="file-input-wrapper">
+                <div class="tooltip">
+                    <label for="excelFile" class="upload-btn">📁 Load Excel File</label>
+                    <span class="tooltiptext">
+                        <strong>Excel File Format (One row per employee per day):</strong><br>
+                        <strong>Sheet Name:</strong> "Shipments"<br>
+                        <strong>Columns:</strong> Date, TTM, Customer, Boxes Picked, Pallets Picked, Errors, ft², Accuracy
+                    </span>
+                </div>
+                <input type="file" id="excelFile" accept=".xlsx,.xls" onchange="handleFileUpload(event)">
+            </div>
+            <div class="file-info" id="fileInfo">No file loaded. Using sample data.</div>
+        </div>
+        
+        <div class="filter-section">
+            <span class="filter-label">Date Range:</span>
+            <div class="date-range">
+                <input type="date" id="startDate" onchange="updateAnalytics()">
+                <span>to</span>
+                <input type="date" id="endDate" onchange="updateAnalytics()">
+            </div>
+        </div>
+        
+        <div class="chart-card">
+            <h3 class="chart-title">TTM ft² Picked vs Median (Excluding values below 2,000 ft²)</h3>
+            <div class="chart-container">
+                <canvas id="ttmChart"></canvas>
+            </div>
+        </div>
+
+        <footer>
+            © 2025 Justin A.F.D. Kozak
+        </footer>
+    </div>
+
+    <script>
+        let allData = [];
+        let ttmChart = null;
+        
+        // Sample data with dates
+        function generateSampleData() {
+            const employees = ['John M.', 'Sarah K.', 'Mike R.', 'Lisa P.', 'David L.', 'Emma W.'];
+            const customers = ['Acme Corp', 'Tech Solutions Inc', 'Global Industries', 'MegaMart', 'Supply Chain Co', 'Retail Giant'];
+            const data = [];
+            const today = new Date();
+            
+            // Generate 30 days of data
+            for (let i = 29; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                
+                employees.forEach(emp => {
+                    data.push({
+                        date: date.toISOString().split('T')[0],
+                        name: emp,
+                        customer: customers[Math.floor(Math.random() * customers.length)],
+                        boxes: Math.floor(Math.random() * 100) + 200,
+                        pallets: Math.floor(Math.random() * 10) + 10,
+                        errors: Math.floor(Math.random() * 3),
+                        sqft: Math.floor(Math.random() * 1000) + 2000,
+                        accuracy: Math.floor(Math.random() * 5) + 94
+                    });
+                });
+            }
+            return data;
+        }
+        
+        allData = generateSampleData();
+        
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            document.getElementById('fileInfo').textContent = `Loading ${file.name}...`;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    // Look for the "Shipments" sheet specifically
+                    const shipmentsSheet = workbook.Sheets['Shipments'];
+                    if (!shipmentsSheet) {
+                        throw new Error('Sheet "Shipments" not found. Please ensure your Excel file has a sheet named "Shipments".');
+                    }
+                    
+                    const jsonData = XLSX.utils.sheet_to_json(shipmentsSheet, {range: 1});
+                    
+                    allData = jsonData.map(row => {
+                        let dateValue = row['Date'] || row['date'] || row['DATE'];
+                        
+                        // Handle Excel date serial numbers
+                        if (typeof dateValue === 'number') {
+                            const excelEpoch = new Date(1899, 11, 30);
+                            const date = new Date(excelEpoch.getTime() + dateValue * 86400000);
+                            dateValue = date.toISOString().split('T')[0];
+                        } else if (dateValue instanceof Date) {
+                            dateValue = dateValue.toISOString().split('T')[0];
+                        } else if (typeof dateValue === 'string') {
+                            const parsed = new Date(dateValue);
+                            if (!isNaN(parsed.getTime())) {
+                                dateValue = parsed.toISOString().split('T')[0];
+                            }
+                        }
+                        
+                        return {
+                            date: dateValue,
+                            name: row['TTM'] || row['Employee'] || row['Name'] || row['employee'] || row['name'] || 'Unknown',
+                            customer: row['Customer'] || row['customer'] || row['CUSTOMER'] || 'Unknown',
+                            boxes: parseInt(row['Boxes Picked'] || row['boxes'] || row['BOXES'] || 0),
+                            pallets: parseInt(row['Pallets Picked'] || row['pallets'] || row['PALLETS'] || 0),
+                            errors: parseInt(row['Errors'] || row['errors'] || row['ERRORS'] || 0),
+                            sqft: parseInt(row['ft²'] || row['sqft'] || row['Square Footage'] || row['SQFT'] || row['Sq Ft'] || 0),
+                            accuracy: parseInt(row['Accuracy'] || row['accuracy'] || row['ACCURACY'] || row['Efficiency'] || row['efficiency'] || 0)
+                        };
+                    });
+                    
+                    // Set date range based on data
+                    const dates = allData.map(d => d.date).filter(d => d).sort();
+                    if (dates.length > 0) {
+                        document.getElementById('startDate').value = dates[0];
+                        document.getElementById('endDate').value = dates[dates.length - 1];
+                    } else {
+                        document.getElementById('startDate').value = '';
+                        document.getElementById('endDate').value = '';
+                    }
+                    
+                    document.getElementById('fileInfo').textContent = `✓ Loaded ${file.name} - ${allData.length} records`;
+                    updateAnalytics();
+                } catch (error) {
+                    document.getElementById('fileInfo').textContent = `❌ Error: ${error.message}`;
+                    console.error('Full error:', error);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+        
+        function getFilteredData() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            if (!startDate && !endDate) {
+                return allData;
+            }
+            
+            let filtered = allData;
+            
+            if (startDate) {
+                filtered = filtered.filter(d => d.date && d.date >= startDate);
+            }
+            if (endDate) {
+                filtered = filtered.filter(d => d.date && d.date <= endDate);
+            }
+            
+            return filtered;
+        }
+        
+        function updateAnalytics() {
+            const filteredData = getFilteredData();
+            
+            // Aggregate ft² by TTM
+            const ttmData = {};
+            filteredData.forEach(row => {
+                if (!ttmData[row.name]) {
+                    ttmData[row.name] = 0;
+                }
+                ttmData[row.name] += row.sqft;
+            });
+            
+            // Convert to array and sort alphabetically
+            const ttmArray = Object.keys(ttmData).map(name => ({
+                name: name,
+                sqft: ttmData[name]
+            })).sort((a, b) => a.name.localeCompare(b.name));
+            
+            // Calculate median (excluding values below 2000)
+            const validSqftValues = ttmArray
+                .map(item => item.sqft)
+                .filter(sqft => sqft >= 2000)
+                .sort((a, b) => a - b);
+            
+            let median = 0;
+            if (validSqftValues.length > 0) {
+                const mid = Math.floor(validSqftValues.length / 2);
+                if (validSqftValues.length % 2 === 0) {
+                    median = (validSqftValues[mid - 1] + validSqftValues[mid]) / 2;
+                } else {
+                    median = validSqftValues[mid];
+                }
+            }
+            
+            // Calculate percentage difference from median for each TTM
+            const percentDifferences = ttmArray.map(item => {
+                if (median === 0) return 0;
+                return ((item.sqft - median) / median) * 100;
+            });
+            
+            // Prepare chart data
+            const labels = ttmArray.map(item => item.name);
+            const sqftValues = ttmArray.map(item => item.sqft);
+            
+            // Create colors based on whether above or below median
+            const barColors = sqftValues.map(sqft => 
+                sqft >= median ? '#10b981' : '#ef4444'
+            );
+            
+            // Destroy existing chart if it exists
+            if (ttmChart) {
+                ttmChart.destroy();
+            }
+            
+            // Create the chart
+            const ctx = document.getElementById('ttmChart').getContext('2d');
+            ttmChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'ft² Picked',
+                            data: sqftValues,
+                            backgroundColor: barColors,
+                            borderRadius: 6,
+                            borderWidth: 2,
+                            borderColor: barColors
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const sqft = context.parsed.y;
+                                    const percentDiff = percentDifferences[context.dataIndex];
+                                    const sign = percentDiff >= 0 ? '+' : '';
+                                    return [
+                                        `ft²: ${sqft.toLocaleString()}`,
+                                        `Median: ${Math.round(median).toLocaleString()}`,
+                                        `Difference: ${sign}${percentDiff.toFixed(1)}%`
+                                    ];
+                                }
+                            }
+                        },
+                        annotation: {
+                            annotations: {
+                                medianLine: {
+                                    type: 'line',
+                                    yMin: median,
+                                    yMax: median,
+                                    borderColor: '#3b82f6',
+                                    borderWidth: 3,
+                                    borderDash: [10, 5],
+                                    label: {
+                                        content: `Median: ${Math.round(median).toLocaleString()} ft²`,
+                                        enabled: true,
+                                        position: 'end',
+                                        backgroundColor: '#3b82f6',
+                                        color: 'white',
+                                        font: {
+                                            weight: 'bold',
+                                            size: 12
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Square Footage (ft²)',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString();
+                                }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Team Members',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            },
+                            ticks: {
+                                font: {
+                                    size: 11
+                                }
+                            }
+                        }
+                    }
+                },
+                plugins: [{
+                    id: 'medianLinePlugin',
+                    afterDatasetsDraw: function(chart) {
+                        const ctx = chart.ctx;
+                        const chartArea = chart.chartArea;
+                        const yScale = chart.scales.y;
+                        
+                        // Draw median line
+                        const yPos = yScale.getPixelForValue(median);
+                        
+                        ctx.save();
+                        ctx.strokeStyle = '#3b82f6';
+                        ctx.lineWidth = 3;
+                        ctx.setLineDash([10, 5]);
+                        ctx.beginPath();
+                        ctx.moveTo(chartArea.left, yPos);
+                        ctx.lineTo(chartArea.right, yPos);
+                        ctx.stroke();
+                        ctx.restore();
+                        
+                        // Draw median label
+                        ctx.save();
+                        ctx.fillStyle = '#3b82f6';
+                        ctx.font = 'bold 12px sans-serif';
+                        const text = `Median: ${Math.round(median).toLocaleString()} ft²`;
+                        const textWidth = ctx.measureText(text).width;
+                        const padding = 8;
+                        const labelX = chartArea.right - textWidth - padding * 2;
+                        const labelY = yPos - 20;
+                        
+                        // Background
+                        ctx.fillRect(labelX - padding, labelY - 12, textWidth + padding * 2, 20);
+                        
+                        // Text
+                        ctx.fillStyle = 'white';
+                        ctx.fillText(text, labelX, labelY);
+                        ctx.restore();
+                    },
+                    afterDraw: function(chart) {
+                        const ctx = chart.ctx;
+                        const chartArea = chart.chartArea;
+                        const xScale = chart.scales.x;
+                        const yScale = chart.scales.y;
+                        
+                        // Draw percentage labels on each bar
+                        ctx.save();
+                        ctx.font = 'bold 11px sans-serif';
+                        ctx.textAlign = 'center';
+                        
+                        chart.data.labels.forEach((label, index) => {
+                            const meta = chart.getDatasetMeta(0);
+                            const bar = meta.data[index];
+                            const percentDiff = percentDifferences[index];
+                            const sign = percentDiff >= 0 ? '+' : '';
+                            const text = `${sign}${percentDiff.toFixed(1)}%`;
+                            
+                            // Position the text above the bar
+                            const x = bar.x;
+                            const y = bar.y - 10;
+                            
+                            // Set color based on above/below median
+                            ctx.fillStyle = percentDiff >= 0 ? '#10b981' : '#ef4444';
+                            ctx.fillText(text, x, y);
+                        });
+                        
+                        ctx.restore();
+                    }
+                }]
+            });
+        }
+
+        // Initialize with sample data
+        const today = new Date().toISOString().split('T')[0];
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
+        document.getElementById('startDate').value = thirtyDaysAgo.toISOString().split('T')[0];
+        document.getElementById('endDate').value = today;
+        
+        updateAnalytics();
+    </script>
+</body>
+</html>
+
+
