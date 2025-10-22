@@ -614,23 +614,29 @@
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
                     
+                    // Debug: Log available sheet names
+                    console.log('Available sheets:', workbook.SheetNames);
+                    
                     // Look for the "Shipments" sheet specifically
                     const shipmentsSheet = workbook.Sheets['Shipments'];
                     if (!shipmentsSheet) {
-                        throw new Error('Sheet "Shipments" not found. Please ensure your Excel file has a sheet named "Shipments".');
+                        throw new Error('Sheet "Shipments" not found. Please ensure your Excel file has a sheet named "Shipments". Available sheets: ' + workbook.SheetNames.join(', '));
                     }
                     
                     // Look for the "Errors" sheet
                     const errorsSheet = workbook.Sheets['Errors'];
                     if (!errorsSheet) {
-                        throw new Error('Sheet "Errors" not found. Please ensure your Excel file has a sheet named "Errors".');
+                        throw new Error('Sheet "Errors" not found. Please ensure your Excel file has a sheet named "Errors". Available sheets: ' + workbook.SheetNames.join(', '));
                     }
                     
                     const jsonData = XLSX.utils.sheet_to_json(shipmentsSheet, {range: 1});// Start parsing from the second row (index 1)
                     const errorsData = XLSX.utils.sheet_to_json(errorsSheet, {range: 1});
                     
+                    console.log('Raw Shipments data count:', jsonData.length);
                     console.log('Sample row from Excel:', jsonData[0]);
                     console.log('Column names detected:', Object.keys(jsonData[0] || {}));
+                    console.log('Raw Errors data count:', errorsData.length);
+                    console.log('Sample error row:', errorsData[0]);
                     
                     allData = jsonData.map(row => {
                         let dateValue = row['Date'] || row['date'] || row['DATE'];
@@ -702,8 +708,11 @@
                     document.getElementById('fileInfo').textContent = `✓ Loaded ${file.name} - ${allData.length} shipment records, ${allErrors.length} error records`;
                     updateDashboard();
                 } catch (error) {
-                    document.getElementById('fileInfo').textContent = `❌ Error: ${error.message}`;
+                    const errorMsg = `❌ Error: ${error.message}`;
+                    document.getElementById('fileInfo').textContent = errorMsg;
                     console.error('Full error:', error);
+                    console.error('Error stack:', error.stack);
+                    alert('Error loading file: ' + error.message);
                 }
             };
             reader.readAsArrayBuffer(file);
@@ -765,6 +774,10 @@
         }
         
         function calculateErrorsAndAccuracy(filteredShipments, filteredErrors) {
+            console.log('=== calculateErrorsAndAccuracy ===');
+            console.log('Filtered shipments:', filteredShipments.length);
+            console.log('Filtered errors:', filteredErrors.length);
+            
             // Count errors by TTM
             const errorsByTTM = {};
             filteredErrors.forEach(error => {
@@ -791,6 +804,10 @@
                 // Accuracy as percentage: (errors / shipments) * 100
                 accuracyByTTM[name] = ((errorCount / shipmentCount) * 100).toFixed(2);
             });
+            
+            console.log('Errors by TTM:', errorsByTTM);
+            console.log('Shipments by TTM:', shipmentsByTTM);
+            console.log('Accuracy by TTM:', accuracyByTTM);
             
             return {
                 errorsByTTM,
@@ -864,20 +881,37 @@
         }
         
         function updateDashboard() {
+            console.log('=== UPDATE DASHBOARD CALLED ===');
+            console.log('allData length:', allData.length);
+            console.log('allErrors length:', allErrors.length);
+            
             const filteredData = getFilteredData();
             const filteredErrors = getFilteredErrors();
             console.log('Filtered data:', filteredData.length, 'records');
             console.log('Filtered errors:', filteredErrors.length, 'records');
             console.log('Sample filtered record:', filteredData[0]);
             
+            if (filteredData.length === 0) {
+                console.warn('WARNING: No filtered data available!');
+                alert('No data available after filtering. Check your date range or data file.');
+                return;
+            }
+            
             const errorStats = calculateErrorsAndAccuracy(filteredData, filteredErrors);
             const aggregatedData = aggregateByPeriod(filteredData, errorStats);
             console.log('Aggregated data:', aggregatedData.length, 'employees');
             console.log('Sample aggregated record:', aggregatedData[0]);
             
+            if (aggregatedData.length === 0) {
+                console.warn('WARNING: No aggregated data!');
+                alert('No aggregated data available. Check console for details.');
+                return;
+            }
+            
             updateMetrics(aggregatedData, filteredData);
             updateCharts(aggregatedData, filteredData);
             updateTable(aggregatedData);
+            console.log('=== DASHBOARD UPDATE COMPLETE ===');
         }
         
         function updateMetrics(data, rawData) {
