@@ -675,7 +675,7 @@
                     
                     const mappedErrors = errorsData.map((row, index) => {
                         // Try multiple possible date column names
-                        let dateValue = row['Date'] || row['date'] || row['DATE'] || 
+                        let dateValue = row['Shipment Date'] || row['Date'] || row['date'] || row['DATE'] || 
                                        row['Date of Error'] || row['Error Date'] ||
                                        row['__EMPTY'] || row['__EMPTY_2'] || row['__EMPTY_3'];
                         
@@ -705,9 +705,17 @@
                         } else if (dateValue instanceof Date) {
                             dateValue = dateValue.toISOString().split('T')[0];
                         } else if (typeof dateValue === 'string') {
-                            const parsed = new Date(dateValue);
-                            if (!isNaN(parsed.getTime())) {
-                                dateValue = parsed.toISOString().split('T')[0];
+                            // Handle MM/DD/YYYY format specifically
+                            const mmddyyyyMatch = dateValue.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+                            if (mmddyyyyMatch) {
+                                const [, month, day, year] = mmddyyyyMatch;
+                                dateValue = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                            } else {
+                                // Try standard date parsing
+                                const parsed = new Date(dateValue);
+                                if (!isNaN(parsed.getTime())) {
+                                    dateValue = parsed.toISOString().split('T')[0];
+                                }
                             }
                         }
                         
