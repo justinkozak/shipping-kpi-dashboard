@@ -673,8 +673,29 @@
                         console.log('Error columns:', Object.keys(errorsData[0]));
                     }
                     
-                    const mappedErrors = errorsData.map(row => {
-                        let dateValue = row['Date'] || row['date'] || row['DATE'];
+                    const mappedErrors = errorsData.map((row, index) => {
+                        // Try multiple possible date column names
+                        let dateValue = row['Date'] || row['date'] || row['DATE'] || 
+                                       row['Date of Error'] || row['Error Date'] ||
+                                       row['__EMPTY'] || row['__EMPTY_2'] || row['__EMPTY_3'];
+                        
+                        // If still no date, try to find any column that looks like a date
+                        if (!dateValue) {
+                            const keys = Object.keys(row);
+                            for (let key of keys) {
+                                if (key !== '__EMPTY_1' && row[key]) {
+                                    // Check if it's a number (Excel serial date) or looks like a date
+                                    if (typeof row[key] === 'number' || 
+                                        (typeof row[key] === 'string' && row[key].match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/))) {
+                                        dateValue = row[key];
+                                        if (index === 0) {
+                                            console.log(`Using column "${key}" as date column`);
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                        }
                         
                         // Handle Excel date serial numbers
                         if (typeof dateValue === 'number') {
@@ -690,7 +711,17 @@
                             }
                         }
                         
-                        const ttmName = row['TTM'] || row['Employee'] || row['Name'] || row['employee'] || row['name'] || 'Unknown';
+                        // Try multiple possible TTM column names
+                        const ttmName = row['TTM'] || row['ttm'] || row['Employee'] || row['employee'] || 
+                                       row['Name'] || row['name'] || row['Team Member'] || 
+                                       row['__EMPTY_1'] || 'Unknown';
+                        
+                        if (index === 0) {
+                            console.log('First error row processing:');
+                            console.log('  Raw row:', row);
+                            console.log('  Date value found:', dateValue);
+                            console.log('  TTM name found:', ttmName);
+                        }
                         
                         return {
                             date: dateValue,
