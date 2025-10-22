@@ -599,8 +599,39 @@
             return errors;
         }
         
-        allData = generateSampleData();
-        allErrors = generateSampleErrors();
+        // Try to load data from localStorage first
+        function loadDataFromStorage() {
+            try {
+                const storedShipments = localStorage.getItem('shippingData');
+                const storedErrors = localStorage.getItem('errorData');
+                const fileName = localStorage.getItem('dataFileName');
+                const loadTime = localStorage.getItem('dataLoadedTime');
+                
+                if (storedShipments && storedErrors) {
+                    allData = JSON.parse(storedShipments);
+                    allErrors = JSON.parse(storedErrors);
+                    
+                    if (fileName && loadTime) {
+                        const timeLoaded = new Date(loadTime).toLocaleString();
+                        document.getElementById('fileInfo').textContent = `✓ Using cached data: ${fileName} (loaded ${timeLoaded})`;
+                    } else {
+                        document.getElementById('fileInfo').textContent = `✓ Using cached data - ${allData.length} shipment records`;
+                    }
+                    
+                    console.log('Loaded data from localStorage:', allData.length, 'shipments,', allErrors.length, 'errors');
+                    return true;
+                }
+            } catch (e) {
+                console.warn('Could not load data from localStorage:', e);
+            }
+            return false;
+        }
+        
+        // Load from storage or use sample data
+        if (!loadDataFromStorage()) {
+            allData = generateSampleData();
+            allErrors = generateSampleErrors();
+        }
         
         function handleFileUpload(event) {
             const file = event.target.files[0];
@@ -778,6 +809,16 @@
                         document.getElementById('endDate').value = '';
                     }
                     
+                    // Store data in localStorage to share with other pages
+                    try {
+                        localStorage.setItem('shippingData', JSON.stringify(allData));
+                        localStorage.setItem('errorData', JSON.stringify(allErrors));
+                        localStorage.setItem('dataLoadedTime', new Date().toISOString());
+                        localStorage.setItem('dataFileName', file.name);
+                    } catch (e) {
+                        console.warn('Could not save data to localStorage:', e);
+                    }
+                    
                     document.getElementById('fileInfo').textContent = `✓ Loaded ${file.name} - ${allData.length} shipment records, ${allErrors.length} error records`;
                     updateDashboard();
                 } catch (error) {
@@ -869,13 +910,14 @@
                 shipmentsByTTM[shipment.name]++;
             });
             
-            // Calculate accuracy for each TTM
+            // Calculate accuracy for each TTM (error rate as percentage)
             const accuracyByTTM = {};
             Object.keys(shipmentsByTTM).forEach(name => {
                 const errorCount = errorsByTTM[name] || 0;
                 const shipmentCount = shipmentsByTTM[name] || 1;
-                // Accuracy as percentage: (errors / shipments) * 100
-                accuracyByTTM[name] = ((errorCount / shipmentCount) * 100).toFixed(2);
+                // Error rate as percentage: (errors / shipments) * 100
+                const errorRate = (errorCount / shipmentCount) * 100;
+                accuracyByTTM[name] = errorRate.toFixed(2);
             });
             
             console.log('Errors by TTM:', errorsByTTM);

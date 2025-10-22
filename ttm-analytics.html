@@ -375,7 +375,36 @@
             return data;
         }
         
-        allData = generateSampleData();
+        // Try to load data from localStorage first
+        function loadDataFromStorage() {
+            try {
+                const storedShipments = localStorage.getItem('shippingData');
+                const fileName = localStorage.getItem('dataFileName');
+                const loadTime = localStorage.getItem('dataLoadedTime');
+                
+                if (storedShipments) {
+                    allData = JSON.parse(storedShipments);
+                    
+                    if (fileName && loadTime) {
+                        const timeLoaded = new Date(loadTime).toLocaleString();
+                        document.getElementById('fileInfo').textContent = `✓ Using cached data: ${fileName} (loaded ${timeLoaded})`;
+                    } else {
+                        document.getElementById('fileInfo').textContent = `✓ Using cached data - ${allData.length} records`;
+                    }
+                    
+                    console.log('Loaded data from localStorage:', allData.length, 'records');
+                    return true;
+                }
+            } catch (e) {
+                console.warn('Could not load data from localStorage:', e);
+            }
+            return false;
+        }
+        
+        // Load from storage or use sample data
+        if (!loadDataFromStorage()) {
+            allData = generateSampleData();
+        }
         
         function handleFileUpload(event) {
             const file = event.target.files[0];
@@ -434,6 +463,15 @@
                     } else {
                         document.getElementById('startDate').value = '';
                         document.getElementById('endDate').value = '';
+                    }
+                    
+                    // Store data in localStorage to share with dashboard
+                    try {
+                        localStorage.setItem('shippingData', JSON.stringify(allData));
+                        localStorage.setItem('dataLoadedTime', new Date().toISOString());
+                        localStorage.setItem('dataFileName', file.name);
+                    } catch (e) {
+                        console.warn('Could not save data to localStorage:', e);
                     }
                     
                     document.getElementById('fileInfo').textContent = `✓ Loaded ${file.name} - ${allData.length} records`;
