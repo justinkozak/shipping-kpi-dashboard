@@ -14,6 +14,46 @@
             padding: 0;
             box-sizing: border-box;
         }
+
+        /* Tab Styles */
+        .tab-container {
+            margin-bottom: 30px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            padding: 12px 24px;
+            background: #f1f5f9;
+            border: none;
+            border-radius: 8px;
+            color: #64748b;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab-btn:hover {
+            background: #e2e8f0;
+            color: #1e293b;
+        }
+
+        .tab-btn.active {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -206,6 +246,103 @@
             color: #1e293b;
             margin-bottom: 20px;
         }
+
+        /* TTM Analytics Styles */
+        .chart-content {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            width: 100%;
+        }
+        
+        .ttm-selector {
+            flex-shrink: 0;
+            width: 220px;
+            max-height: 600px;
+            overflow-y: auto;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f8fafc;
+        }
+        
+        .chart-content .chart-container {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .ttm-selector h4 {
+            margin-bottom: 15px;
+            color: #1e293b;
+            font-size: 1rem;
+            border-bottom: 2px solid #cbd5e1;
+            padding-bottom: 8px;
+        }
+        
+        .ttm-checkbox {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        
+        .ttm-checkbox:hover {
+            background: #e2e8f0;
+        }
+        
+        .ttm-checkbox input[type="checkbox"] {
+            margin-right: 8px;
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+        
+        .ttm-checkbox label {
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #475569;
+            user-select: none;
+        }
+        
+        .select-all-container {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #cbd5e1;
+        }
+        
+        .select-all-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            margin-right: 5px;
+            transition: background 0.2s;
+        }
+        
+        .select-all-btn:hover {
+            background: #2563eb;
+        }
+        
+        .deselect-all-btn {
+            background: #64748b;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: background 0.2s;
+        }
+        
+        .deselect-all-btn:hover {
+            background: #475569;
+        }
         
         .chart-container {
             position: relative;
@@ -388,8 +525,17 @@
             <h1>Operations KPI Dashboard</h1>
             <p class="subtitle">Warehouse Performance Metrics</p>
         </header>
-        
-        <div class="upload-section">
+
+        <div class="tab-container">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="showTab('dashboard')">Dashboard</button>
+                <button class="tab-btn" onclick="showTab('analytics')">TTM Analytics</button>
+            </div>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard-tab" class="tab-content active">
+            <div class="upload-section">
             <div class="file-input-wrapper">
                 <div class="tooltip">
                     <label for="excelFile" class="upload-btn">📁 Load Excel File</label>
@@ -432,9 +578,14 @@
                 <div class="date-display" id="palletsDateRange"></div>
             </div>
             <div class="metric-card green">
-                <div class="metric-label">Total Ft² Picked</div>
+                <div class="metric-label">Total ft² Shipped</div>
                 <div class="metric-value" id="totalSqft">-</div>
                 <div class="date-display" id="sqftDateRange"></div>
+            </div>
+            <div class="metric-card blue">
+                <div class="metric-label">Total ft² Received</div>
+                <div class="metric-value" id="totalSqftReceived">-</div>
+                <div class="date-display" id="sqftReceivedDateRange"></div>
             </div>
             <div class="metric-card red">
                 <div class="metric-label">Error Rate</div>
@@ -504,6 +655,7 @@
                         <th>Sq Ft Shipped</th>
                         <th>Accuracy</th>
                         <th>Lines Shipped</th>
+                        <th># Pallets Rcvd</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
@@ -511,10 +663,50 @@
             </table>
         </div>
 
-        <div style="text-align: center; margin-bottom: 20px;">
-            <a href="ttm-analytics.html" style="display: inline-block; background: #3b82f6; color: white; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.3s;" onmouseover="this.style.background='#2563eb'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.4)'" onmouseout="this.style.background='#3b82f6'; this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-                📊 View TTM Performance Analytics
-            </a>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div id="analytics-tab" class="tab-content">
+            <div class="upload-section">
+                <div class="file-input-wrapper">
+                    <div class="tooltip">
+                        <label for="excelFile" class="upload-btn">📁 Load Excel File</label>
+                        <span class="tooltiptext">
+                            <strong>Excel File Format:</strong><br>
+                            <strong>Sheet "Shipments":</strong> Date, TTM, Customer, Boxes Picked, Pallets Picked, ft²<br>
+                            <strong>Sheet "Errors":</strong> Date, TTM<br>
+                            (Accuracy calculated as: error count / shipment count)
+                        </span>
+                    </div>
+                </div>
+                <div class="file-info" id="fileInfo2">No file loaded. Using sample data.</div>
+            </div>
+
+            <div class="filter-section">
+                <span class="filter-label">Date Range:</span>
+                <div class="date-range">
+                    <input type="date" id="startDate2" onchange="updateAnalytics()">
+                    <span>to</span>
+                    <input type="date" id="endDate2" onchange="updateAnalytics()">
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <h3 class="chart-title">TTM ft² Picked vs Median (Excluding values below 2,000 ft²)</h3>
+                <div class="chart-content">
+                    <div class="ttm-selector">
+                        <h4>Select TTMs</h4>
+                        <div class="select-all-container">
+                            <button class="select-all-btn" onclick="selectAllTTMs()">Select All</button>
+                            <button class="deselect-all-btn" onclick="deselectAllTTMs()">Deselect All</button>
+                        </div>
+                        <div id="ttmCheckboxes"></div>
+                    </div>
+                    <div class="chart-container" style="height: 600px;">
+                        <canvas id="ttmChart"></canvas>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <footer>
@@ -542,6 +734,9 @@
         let charts = {};
         let allData = [];
         let allErrors = [];
+        let allReceived = [];
+        let ttmChart = null;
+        let selectedTTMs = new Set();
         let currentPeriod = 'daily';
         let customerModalChart = null;
         
@@ -604,21 +799,23 @@
             try {
                 const storedShipments = localStorage.getItem('shippingData');
                 const storedErrors = localStorage.getItem('errorData');
+                const storedReceived = localStorage.getItem('receivedData');
                 const fileName = localStorage.getItem('dataFileName');
                 const loadTime = localStorage.getItem('dataLoadedTime');
                 
-                if (storedShipments && storedErrors) {
+                if (storedShipments && storedErrors && storedReceived) {
                     allData = JSON.parse(storedShipments);
                     allErrors = JSON.parse(storedErrors);
+                    allReceived = JSON.parse(storedReceived);
                     
-                    if (fileName && loadTime) {
-                        const timeLoaded = new Date(loadTime).toLocaleString();
-                        document.getElementById('fileInfo').textContent = `✓ Using cached data: ${fileName} (loaded ${timeLoaded})`;
-                    } else {
-                        document.getElementById('fileInfo').textContent = `✓ Using cached data - ${allData.length} shipment records`;
-                    }
-                    
-                    console.log('Loaded data from localStorage:', allData.length, 'shipments,', allErrors.length, 'errors');
+                if (fileName && loadTime) {
+                    const timeLoaded = new Date(loadTime).toLocaleString();
+                    document.getElementById('fileInfo').textContent = `✓ Using cached data: ${fileName} (loaded ${timeLoaded})`;
+                    document.getElementById('fileInfo2').textContent = `✓ Using cached data: ${fileName} (loaded ${timeLoaded})`;
+                } else {
+                    document.getElementById('fileInfo').textContent = `✓ Using cached data - ${allData.length} shipment records`;
+                    document.getElementById('fileInfo2').textContent = `✓ Using cached data - ${allData.length} shipment records`;
+                }                    console.log('Loaded data from localStorage:', allData.length, 'shipments,', allErrors.length, 'errors,', allReceived.length, 'received');
                     return true;
                 }
             } catch (e) {
@@ -631,6 +828,7 @@
         if (!loadDataFromStorage()) {
             allData = generateSampleData();
             allErrors = generateSampleErrors();
+            allReceived = []; // No sample received data
         }
         
         function handleFileUpload(event) {
@@ -638,6 +836,7 @@
             if (!file) return;
             
             document.getElementById('fileInfo').textContent = `Loading ${file.name}...`;
+            document.getElementById('fileInfo2').textContent = `Loading ${file.name}...`;
             
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -660,14 +859,25 @@
                         throw new Error('Sheet "Errors" not found. Please ensure your Excel file has a sheet named "Errors". Available sheets: ' + workbook.SheetNames.join(', '));
                     }
                     
+                    // Look for the "Received" sheet
+                    const receivedSheet = workbook.Sheets['Received'];
+                    if (!receivedSheet) {
+                        throw new Error('Sheet "Received" not found. Please ensure your Excel file has a sheet named "Received". Available sheets: ' + workbook.SheetNames.join(', '));
+                    }
+                    
                     const jsonData = XLSX.utils.sheet_to_json(shipmentsSheet, {range: 1});// Start parsing from the second row (index 1)
                     const errorsData = XLSX.utils.sheet_to_json(errorsSheet, {range: 1});
+                    const receivedData = XLSX.utils.sheet_to_json(receivedSheet, {range: 2}); // Skip extra header row
                     
                     console.log('Raw Shipments data count:', jsonData.length);
                     console.log('Sample row from Excel:', jsonData[0]);
                     console.log('Column names detected:', Object.keys(jsonData[0] || {}));
                     console.log('Raw Errors data count:', errorsData.length);
                     console.log('Sample error row:', errorsData[0]);
+                    console.log('Raw Received data count:', receivedData.length);
+                    console.log('Sample received row:', receivedData[0]);
+                    console.log('Second received row:', receivedData[1]);
+                    console.log('Third received row:', receivedData[2]);
                     
                     allData = jsonData.map(row => {
                         let dateValue = row['Date'] || row['date'] || row['DATE'];
@@ -798,32 +1008,110 @@
                     console.log('Total shipment records:', allData.length);
                     console.log('Total error records:', allErrors.length);
                     
+                    // Process received data
+                    console.log('Processing received data - before mapping:', receivedData.length, 'rows');
+                    if (receivedData.length > 0) {
+                        console.log('First received row (raw):', receivedData[0]);
+                        console.log('Received columns:', Object.keys(receivedData[0]));
+                    }
+                    
+                    const mappedReceived = receivedData.map((row, index) => {
+                        let dateValue = row['__EMPTY_8'] || row['Receive Date'] || row['receive date'] || row['Date'] || row['date'] || row['DATE'];
+                        
+                        // Handle Excel date serial numbers
+                        if (typeof dateValue === 'number') {
+                            const excelEpoch = new Date(1899, 11, 30);
+                            const date = new Date(excelEpoch.getTime() + dateValue * 86400000);
+                            dateValue = date.toISOString().split('T')[0];
+                        } else if (dateValue instanceof Date) {
+                            dateValue = dateValue.toISOString().split('T')[0];
+                        } else if (typeof dateValue === 'string') {
+                            // Handle MM/DD/YYYY format specifically
+                            const mmddyyyyMatch = dateValue.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+                            if (mmddyyyyMatch) {
+                                const [, month, day, year] = mmddyyyyMatch;
+                                dateValue = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                            } else {
+                                // Try standard date parsing
+                                const parsed = new Date(dateValue);
+                                if (!isNaN(parsed.getTime())) {
+                                    dateValue = parsed.toISOString().split('T')[0];
+                                }
+                            }
+                        }
+                        
+                        const sqftValue = row['__EMPTY_6'] || row['ft²'] || row['sqft'] || row['Square Footage'] || row['SQFT'] || row['Sq Ft'];
+                        const sqftParsed = parseFloat(sqftValue) || 0;
+                        
+                        const receiverName = row['__EMPTY_9'] || row['Receiver'] || row['receiver'] || row['TTM'] || 'Unknown';
+                        const palletCount = parseFloat(row['__EMPTY_11'] || row['Pallet Count'] || row['pallet count'] || row['Pallets'] || 0) || 0;
+                        
+                        if (index < 3) {
+                            console.log(`Received row ${index}:`, {
+                                rawDate: row['__EMPTY_8'] || row['Receive Date'] || row['Date'],
+                                parsedDate: dateValue,
+                                rawSqft: sqftValue,
+                                parsedSqft: sqftParsed,
+                                receiver: receiverName,
+                                palletCount: palletCount,
+                                allKeys: Object.keys(row)
+                            });
+                        }
+                        
+                        return {
+                            date: dateValue,
+                            sqft: sqftParsed,
+                            receiver: receiverName,
+                            pallets: palletCount
+                        };
+                    });
+                    
+                    console.log('Mapped received before filter:', mappedReceived.length);
+                    
+                    allReceived = mappedReceived.filter(row => {
+                        const dateValid = row.date && row.date !== 'undefined' && 
+                                         row.date.match(/\d{4}-\d{2}-\d{2}/); // Must be in YYYY-MM-DD format
+                        return dateValid;
+                    });
+                    
+                    console.log('Total received records:', allReceived.length);
+                    if (allReceived.length > 0) {
+                        console.log('First received after processing:', allReceived[0]);
+                    }
+                    
                     // Set date range based on data
                     const dates = allData.map(d => d.date).filter(d => d).sort();
                     if (dates.length > 0) {
                         document.getElementById('startDate').value = dates[0];
                         document.getElementById('endDate').value = dates[dates.length - 1];
+                        document.getElementById('startDate2').value = dates[0];
+                        document.getElementById('endDate2').value = dates[dates.length - 1];
                     } else {
                         // If no valid dates, clear the date filters
                         document.getElementById('startDate').value = '';
                         document.getElementById('endDate').value = '';
+                        document.getElementById('startDate2').value = '';
+                        document.getElementById('endDate2').value = '';
                     }
                     
                     // Store data in localStorage to share with other pages
                     try {
                         localStorage.setItem('shippingData', JSON.stringify(allData));
                         localStorage.setItem('errorData', JSON.stringify(allErrors));
+                        localStorage.setItem('receivedData', JSON.stringify(allReceived));
                         localStorage.setItem('dataLoadedTime', new Date().toISOString());
                         localStorage.setItem('dataFileName', file.name);
                     } catch (e) {
                         console.warn('Could not save data to localStorage:', e);
                     }
                     
-                    document.getElementById('fileInfo').textContent = `✓ Loaded ${file.name} - ${allData.length} shipment records, ${allErrors.length} error records`;
+                    document.getElementById('fileInfo').textContent = `✓ Loaded ${file.name} - ${allData.length} shipment records, ${allErrors.length} error records, ${allReceived.length} received records`;
+                    document.getElementById('fileInfo2').textContent = `✓ Loaded ${file.name} - ${allData.length} shipment records, ${allErrors.length} error records, ${allReceived.length} received records`;
                     updateDashboard();
                 } catch (error) {
                     const errorMsg = `❌ Error: ${error.message}`;
                     document.getElementById('fileInfo').textContent = errorMsg;
+                    document.getElementById('fileInfo2').textContent = errorMsg;
                     console.error('Full error:', error);
                     console.error('Error stack:', error.stack);
                     alert('Error loading file: ' + error.message);
@@ -842,23 +1130,32 @@
         function getFilteredData() {
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
+            const startDate2 = document.getElementById('startDate2').value;
+            const endDate2 = document.getElementById('endDate2').value;
             
-            console.log('Date range - Start:', startDate, 'End:', endDate);
+            // Use analytics tab dates if on analytics tab
+            const activeTab = document.querySelector('.tab-content.active');
+            const useAnalyticsDates = activeTab && activeTab.id === 'analytics-tab';
+            
+            const actualStartDate = useAnalyticsDates ? startDate2 : startDate;
+            const actualEndDate = useAnalyticsDates ? endDate2 : endDate;
+            
+            console.log('Date range - Start:', actualStartDate, 'End:', actualEndDate);
             console.log('All data length:', allData.length);
             
             // If no date filters are set, return all data
-            if (!startDate && !endDate) {
+            if (!actualStartDate && !actualEndDate) {
                 console.log('No date filters - returning all data');
                 return allData;
             }
             
             let filtered = allData;
             
-            if (startDate) {
-                filtered = filtered.filter(d => d.date && d.date >= startDate);
+            if (actualStartDate) {
+                filtered = filtered.filter(d => d.date && d.date >= actualStartDate);
             }
-            if (endDate) {
-                filtered = filtered.filter(d => d.date && d.date <= endDate);
+            if (actualEndDate) {
+                filtered = filtered.filter(d => d.date && d.date <= actualEndDate);
             }
             
             console.log('After filtering:', filtered.length, 'records');
@@ -876,6 +1173,27 @@
             }
             
             let filtered = allErrors;
+            
+            if (startDate) {
+                filtered = filtered.filter(d => d.date && d.date >= startDate);
+            }
+            if (endDate) {
+                filtered = filtered.filter(d => d.date && d.date <= endDate);
+            }
+            
+            return filtered;
+        }
+        
+        function getFilteredReceived() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            // If no date filters are set, return all received
+            if (!startDate && !endDate) {
+                return allReceived;
+            }
+            
+            let filtered = allReceived;
             
             if (startDate) {
                 filtered = filtered.filter(d => d.date && d.date >= startDate);
@@ -931,7 +1249,7 @@
             };
         }
         
-        function aggregateByPeriod(data, errorStats) {
+        function aggregateByPeriod(data, errorStats, receivedData) {
             const grouped = {};
             
             data.forEach(row => {
@@ -976,7 +1294,8 @@
                         days: 0,
                         errors: 0,
                         accuracy: 0,
-                        linesShipped: 0
+                        linesShipped: 0,
+                        palletsReceived: 0
                     };
                 }
                 byEmployee[item.name].boxes += item.boxes;
@@ -992,6 +1311,15 @@
                 byEmployee[name].linesShipped = errorStats.shipmentsByTTM[name] || 0;
             });
             
+            // Add pallets received from receivedData
+            if (receivedData && receivedData.length > 0) {
+                receivedData.forEach(row => {
+                    if (row.receiver && byEmployee[row.receiver]) {
+                        byEmployee[row.receiver].palletsReceived += row.pallets || 0;
+                    }
+                });
+            }
+            
             return Object.values(byEmployee);
         }
         
@@ -1002,6 +1330,7 @@
             
             const filteredData = getFilteredData();
             const filteredErrors = getFilteredErrors();
+            const filteredReceivedData = getFilteredReceived();
             console.log('Filtered data:', filteredData.length, 'records');
             console.log('Filtered errors:', filteredErrors.length, 'records');
             console.log('Sample filtered record:', filteredData[0]);
@@ -1013,7 +1342,7 @@
             }
             
             const errorStats = calculateErrorsAndAccuracy(filteredData, filteredErrors);
-            const aggregatedData = aggregateByPeriod(filteredData, errorStats);
+            const aggregatedData = aggregateByPeriod(filteredData, errorStats, filteredReceivedData);
             console.log('Aggregated data:', aggregatedData.length, 'employees');
             console.log('Sample aggregated record:', aggregatedData[0]);
             
@@ -1040,6 +1369,10 @@
             const avgAccuracy = (100 - avgErrorRate).toFixed(2);
             const errorRate = totalLinesShipped > 0 ? ((totalErrors / totalLinesShipped) * 100).toFixed(2) : '0.00';
             
+            // Calculate total ft² received
+            const filteredReceivedData = getFilteredReceived();
+            const totalSqftReceived = filteredReceivedData.reduce((sum, row) => sum + (row.sqft || 0), 0);
+            
             const startDate = document.getElementById('startDate').value || 'All';
             const endDate = document.getElementById('endDate').value || 'All';
             const dateRangeText = `${startDate} to ${endDate}`;
@@ -1047,6 +1380,7 @@
             document.getElementById('totalBoxes').textContent = totalBoxes.toLocaleString();
             document.getElementById('totalPallets').textContent = totalPallets.toLocaleString();
             document.getElementById('totalSqft').textContent = totalSqft.toLocaleString();
+            document.getElementById('totalSqftReceived').textContent = Math.round(totalSqftReceived).toLocaleString();
             document.getElementById('errorRate').textContent = errorRate + '%';
             document.getElementById('avgAccuracy').textContent = avgAccuracy + '%';
             
@@ -1195,6 +1529,22 @@
             filteredData.forEach(row => allDatesSet.add(row.date));
             const allDates = Array.from(allDatesSet).sort();
             
+            // Calculate total shipped per date (sum of all employees)
+            const totalShippedPerDate = allDates.map(date => {
+                return filteredData
+                    .filter(row => row.date === date)
+                    .reduce((sum, row) => sum + row.sqft, 0);
+            });
+            
+            // Calculate received per date
+            const receivedDataForTrend = getFilteredReceived();
+            const receivedPerDate = allDates.map(date => {
+                const received = receivedDataForTrend
+                    .filter(row => row.date === date)
+                    .reduce((sum, row) => sum + row.sqft, 0);
+                return received > 0 ? received : null;
+            });
+            
             // Sort employee names alphabetically
             const sortedEmployeeNames = Object.keys(sqftByEmployee).sort((a, b) => a.localeCompare(b));
             
@@ -1212,8 +1562,31 @@
                     borderWidth: 2,
                     pointRadius: 3,
                     pointHoverRadius: 5,
-                    spanGaps: true
+                    spanGaps: true,
+                    type: 'line',
+                    order: 1
                 };
+            });
+            
+            // Add background datasets for received (dark red) and shipped (dark green)
+            sqftDatasets.unshift({
+                label: 'Shaded Area: ft² Received',
+                data: receivedPerDate,
+                backgroundColor: 'rgba(220, 38, 38, 0.7)', // Dark red with 70% opacity
+                borderColor: 'rgba(220, 38, 38, 0.7)',
+                type: 'bar',
+                order: 3,
+                barThickness: 'flex'
+            });
+            
+            sqftDatasets.unshift({
+                label: 'Shaded Area: ft² Shipped',
+                data: totalShippedPerDate,
+                backgroundColor: 'rgba(22, 163, 74, 0.7)', // Dark green with 70% opacity
+                borderColor: 'rgba(22, 163, 74, 0.7)',
+                type: 'bar',
+                order: 2,
+                barThickness: 'flex'
             });
             
             charts.sqftTrend = new Chart(document.getElementById('sqftTrendChart'), {
@@ -1274,15 +1647,27 @@
                 }
             });
             
+            // Process received data for weekday chart
+            const receivedDataForWeekday = getFilteredReceived();
+            const dailyReceived = {};
+            receivedDataForWeekday.forEach(row => {
+                if (row.date) {
+                    if (!dailyReceived[row.date]) {
+                        dailyReceived[row.date] = 0;
+                    }
+                    dailyReceived[row.date] += row.sqft;
+                }
+            });
+            
             // Then group by weekday
             const weekdayData = {
-                'Sunday': { total: 0, count: 0 },
-                'Monday': { total: 0, count: 0 },
-                'Tuesday': { total: 0, count: 0 },
-                'Wednesday': { total: 0, count: 0 },
-                'Thursday': { total: 0, count: 0 },
-                'Friday': { total: 0, count: 0 },
-                'Saturday': { total: 0, count: 0 }
+                'Sunday': { total: 0, count: 0, received: 0, receivedCount: 0 },
+                'Monday': { total: 0, count: 0, received: 0, receivedCount: 0 },
+                'Tuesday': { total: 0, count: 0, received: 0, receivedCount: 0 },
+                'Wednesday': { total: 0, count: 0, received: 0, receivedCount: 0 },
+                'Thursday': { total: 0, count: 0, received: 0, receivedCount: 0 },
+                'Friday': { total: 0, count: 0, received: 0, receivedCount: 0 },
+                'Saturday': { total: 0, count: 0, received: 0, receivedCount: 0 }
             };
             
             const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -1296,9 +1681,23 @@
                 weekdayData[dayName].count += 1;
             });
             
+            Object.keys(dailyReceived).forEach(dateStr => {
+                const [year, month, day] = dateStr.split('-').map(Number);
+                const date = new Date(year, month - 1, day);
+                const dayName = weekdayNames[date.getDay()];
+                weekdayData[dayName].received += dailyReceived[dateStr];
+                weekdayData[dayName].receivedCount += 1;
+            });
+            
             const weekdayAverages = weekdayNames.map(day => {
                 return weekdayData[day].count > 0 
                     ? Math.round(weekdayData[day].total / weekdayData[day].count)
+                    : 0;
+            });
+            
+            const weekdayReceivedAverages = weekdayNames.map(day => {
+                return weekdayData[day].receivedCount > 0 
+                    ? Math.round(weekdayData[day].received / weekdayData[day].receivedCount)
                     : 0;
             });
             
@@ -1306,24 +1705,41 @@
                 type: 'bar',
                 data: {
                     labels: weekdayNames,
-                    datasets: [{
-                        label: 'Average Ft² Picked',
-                        data: weekdayAverages,
-                        backgroundColor: ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#a855f7', '#ec4899', '#8b5cf6'],
-                        borderRadius: 6
-                    }]
+                    datasets: [
+                        {
+                            label: 'Shaded Area: ft² Received',
+                            data: weekdayReceivedAverages,
+                            backgroundColor: 'rgba(220, 38, 38, 0.7)', // Dark red with 70% opacity
+                            borderRadius: 6,
+                            order: 2
+                        },
+                        {
+                            label: 'Average Ft² Picked',
+                            data: weekdayAverages,
+                            backgroundColor: ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#a855f7', '#ec4899', '#8b5cf6'],
+                            borderRadius: 6,
+                            order: 1
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { 
-                        legend: { display: false },
+                        legend: { 
+                            display: true,
+                            position: 'top'
+                        },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
                                     const day = weekdayNames[context.dataIndex];
                                     const count = weekdayData[day].count;
-                                    return `Avg: ${context.parsed.y.toLocaleString()} ft² (${count} days) - Click for customer breakdown`;
+                                    if (context.datasetIndex === 0) {
+                                        return `Avg Received: ${context.parsed.y.toLocaleString()} ft² (${weekdayData[day].receivedCount} days)`;
+                                    } else {
+                                        return `Avg Picked: ${context.parsed.y.toLocaleString()} ft² (${count} days) - Click for customer breakdown`;
+                                    }
                                 }
                             }
                         }
@@ -1371,6 +1787,7 @@
                     <td>${emp.sqft.toLocaleString()}</td>
                     <td><span class="badge ${accuracyBadge}">${accuracyRate.toFixed(2)}%</span></td>
                     <td>${emp.linesShipped}</td>
+                    <td>${Math.round(emp.palletsReceived || 0)}</td>
                 `;
             });
             
@@ -1383,6 +1800,7 @@
             const avgErrorRate = sortedData.reduce((sum, emp) => sum + parseFloat(emp.accuracy), 0) / sortedData.length;
             const avgAccuracy = (100 - avgErrorRate).toFixed(2);
             const totalLinesShipped = sortedData.reduce((sum, emp) => sum + emp.linesShipped, 0);
+            const totalPalletsReceived = sortedData.reduce((sum, emp) => sum + (emp.palletsReceived || 0), 0);
             
             const totalRow = tbody.insertRow();
             totalRow.style.background = '#f1f5f9';
@@ -1395,6 +1813,7 @@
                 <td>${totalSqft.toLocaleString()}</td>
                 <td>${avgAccuracy}%</td>
                 <td>${totalLinesShipped}</td>
+                <td>${Math.round(totalPalletsReceived)}</td>
             `;
         }
         
@@ -1533,12 +1952,314 @@
             }
         }
 
+        // Tab functions
+        function showTab(tabId) {
+            // Update button states
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.toLowerCase().includes(tabId)) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Update content visibility
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${tabId}-tab`).classList.add('active');
+
+            // Update charts if needed
+            if (tabId === 'analytics') {
+                updateAnalytics();
+            } else {
+                updateDashboard();
+            }
+        }
+
+        // TTM Analytics functions
+        function populateTTMCheckboxes() {
+            const filteredData = getFilteredData();
+            
+            // Get unique TTM names
+            const ttmData = {};
+            filteredData.forEach(row => {
+                if (!ttmData[row.name]) {
+                    ttmData[row.name] = 0;
+                }
+                ttmData[row.name] += row.sqft;
+            });
+            
+            const ttmNames = Object.keys(ttmData).sort((a, b) => a.localeCompare(b));
+            
+            // If this is the first time or all TTMs were selected, select all
+            if (selectedTTMs.size === 0) {
+                ttmNames.forEach(name => selectedTTMs.add(name));
+            }
+            
+            // Create checkboxes
+            const container = document.getElementById('ttmCheckboxes');
+            container.innerHTML = '';
+            
+            ttmNames.forEach(name => {
+                const div = document.createElement('div');
+                div.className = 'ttm-checkbox';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `ttm-${name.replace(/\s+/g, '-')}`;
+                checkbox.value = name;
+                checkbox.checked = selectedTTMs.has(name);
+                checkbox.onchange = function() {
+                    if (this.checked) {
+                        selectedTTMs.add(name);
+                    } else {
+                        selectedTTMs.delete(name);
+                    }
+                    updateTTMChart();
+                };
+                
+                const label = document.createElement('label');
+                label.htmlFor = checkbox.id;
+                label.textContent = name;
+                
+                div.appendChild(checkbox);
+                div.appendChild(label);
+                container.appendChild(div);
+            });
+        }
+
+        function selectAllTTMs() {
+            const checkboxes = document.querySelectorAll('#ttmCheckboxes input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                cb.checked = true;
+                selectedTTMs.add(cb.value);
+            });
+            updateTTMChart();
+        }
+
+        function deselectAllTTMs() {
+            const checkboxes = document.querySelectorAll('#ttmCheckboxes input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+                selectedTTMs.delete(cb.value);
+            });
+            updateTTMChart();
+        }
+
+        function updateAnalytics() {
+            populateTTMCheckboxes();
+            updateTTMChart();
+        }
+
+        function updateTTMChart() {
+            const filteredData = getFilteredData();
+            
+            // Aggregate ft² by TTM
+            const ttmData = {};
+            filteredData.forEach(row => {
+                if (!ttmData[row.name]) {
+                    ttmData[row.name] = 0;
+                }
+                ttmData[row.name] += row.sqft;
+            });
+            
+            // Convert to array and sort alphabetically
+            let ttmArray = Object.keys(ttmData).map(name => ({
+                name: name,
+                sqft: ttmData[name]
+            })).sort((a, b) => a.name.localeCompare(b.name));
+            
+            // Filter to only show selected TTMs
+            ttmArray = ttmArray.filter(item => selectedTTMs.has(item.name));
+            
+            // Calculate median ONLY from selected TTMs (excluding values below 2000)
+            const validSqftValues = ttmArray
+                .map(item => item.sqft)
+                .filter(sqft => sqft >= 2000)
+                .sort((a, b) => a - b);
+            
+            let median = 0;
+            if (validSqftValues.length > 0) {
+                const mid = Math.floor(validSqftValues.length / 2);
+                if (validSqftValues.length % 2 === 0) {
+                    median = (validSqftValues[mid - 1] + validSqftValues[mid]) / 2;
+                } else {
+                    median = validSqftValues[mid];
+                }
+            }
+            
+            // Calculate percentage difference from median for each TTM
+            const percentDifferences = ttmArray.map(item => {
+                if (median === 0) return 0;
+                return ((item.sqft - median) / median) * 100;
+            });
+            
+            // Prepare chart data
+            const labels = ttmArray.map(item => item.name);
+            const sqftValues = ttmArray.map(item => item.sqft);
+            
+            // Create colors based on whether above or below median
+            const barColors = sqftValues.map(sqft => 
+                sqft >= median ? '#10b981' : '#ef4444'
+            );
+            
+            // Destroy existing chart if it exists
+            if (ttmChart) {
+                ttmChart.destroy();
+            }
+            
+            // Create the chart
+            const ctx = document.getElementById('ttmChart').getContext('2d');
+            ttmChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'ft² Picked',
+                            data: sqftValues,
+                            backgroundColor: barColors,
+                            borderRadius: 6,
+                            borderWidth: 2,
+                            borderColor: barColors
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const sqft = context.parsed.y;
+                                    const percentDiff = percentDifferences[context.dataIndex];
+                                    const sign = percentDiff >= 0 ? '+' : '';
+                                    return [
+                                        `ft²: ${sqft.toLocaleString()}`,
+                                        `Median: ${Math.round(median).toLocaleString()}`,
+                                        `Difference: ${sign}${percentDiff.toFixed(1)}%`
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Square Footage (ft²)',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString();
+                                }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Team Members',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            },
+                            ticks: {
+                                font: {
+                                    size: 11
+                                }
+                            }
+                        }
+                    }
+                },
+                plugins: [{
+                    id: 'medianLinePlugin',
+                    afterDatasetsDraw: function(chart) {
+                        const ctx = chart.ctx;
+                        const chartArea = chart.chartArea;
+                        const yScale = chart.scales.y;
+                        
+                        // Draw median line
+                        const yPos = yScale.getPixelForValue(median);
+                        
+                        ctx.save();
+                        ctx.strokeStyle = '#3b82f6';
+                        ctx.lineWidth = 3;
+                        ctx.setLineDash([10, 5]);
+                        ctx.beginPath();
+                        ctx.moveTo(chartArea.left, yPos);
+                        ctx.lineTo(chartArea.right, yPos);
+                        ctx.stroke();
+                        ctx.restore();
+                        
+                        // Draw median label
+                        ctx.save();
+                        ctx.fillStyle = '#3b82f6';
+                        ctx.font = 'bold 12px sans-serif';
+                        const text = `Median: ${Math.round(median).toLocaleString()} ft²`;
+                        const textWidth = ctx.measureText(text).width;
+                        const padding = 8;
+                        const labelX = chartArea.right - textWidth - padding * 2;
+                        const labelY = yPos - 20;
+                        
+                        // Background
+                        ctx.fillRect(labelX - padding, labelY - 12, textWidth + padding * 2, 20);
+                        
+                        // Text
+                        ctx.fillStyle = 'white';
+                        ctx.fillText(text, labelX, labelY);
+                        ctx.restore();
+                    },
+                    afterDraw: function(chart) {
+                        const ctx = chart.ctx;
+                        const chartArea = chart.chartArea;
+                        const xScale = chart.scales.x;
+                        const yScale = chart.scales.y;
+                        
+                        // Draw percentage labels on each bar
+                        ctx.save();
+                        ctx.font = 'bold 11px sans-serif';
+                        ctx.textAlign = 'center';
+                        
+                        chart.data.labels.forEach((label, index) => {
+                            const meta = chart.getDatasetMeta(0);
+                            const bar = meta.data[index];
+                            const percentDiff = percentDifferences[index];
+                            const sign = percentDiff >= 0 ? '+' : '';
+                            const text = `${sign}${percentDiff.toFixed(1)}%`;
+                            
+                            // Position the text above the bar
+                            const x = bar.x;
+                            const y = bar.y - 10;
+                            
+                            // Set color based on above/below median
+                            ctx.fillStyle = percentDiff >= 0 ? '#10b981' : '#ef4444';
+                            ctx.fillText(text, x, y);
+                        });
+                        
+                        ctx.restore();
+                    }
+                }]
+            });
+        }
+
         // Initialize with sample data
         const today = new Date().toISOString().split('T')[0];
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
         document.getElementById('startDate').value = thirtyDaysAgo.toISOString().split('T')[0];
         document.getElementById('endDate').value = today;
+        document.getElementById('startDate2').value = thirtyDaysAgo.toISOString().split('T')[0];
+        document.getElementById('endDate2').value = today;
         
         updateDashboard();
     </script>
