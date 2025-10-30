@@ -6,64 +6,92 @@
     <meta name="copyright" content="© 2025 Justin A.F.D. Kozak">
     <meta name="license" content="MIT License">
     <title>Operations KPI Dashboard</title>
+    
+    <!-- External Libraries -->
+    <!-- XLSX.js for Excel file parsing - reads .xlsx files and converts sheets to JSON -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- Chart.js for data visualization - creates interactive charts and graphs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    
     <style>
+        /* ========================================
+           GLOBAL STYLES
+           ======================================== */
+        
+        /* Reset default browser styles for consistent rendering across browsers */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
-        /* Tab Styles */
+        /* ========================================
+           TAB NAVIGATION STYLES
+           ======================================== */
+        
+        /* Tab Styles - Creates tabbed interface for Dashboard and TTM Analytics pages */
         .tab-container {
             margin-bottom: 30px;
         }
 
+        /* Horizontal layout for tab buttons */
         .tabs {
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
         }
 
+        /* Individual tab button styling */
         .tab-btn {
             padding: 12px 24px;
-            background: #f1f5f9;
+            background: #f1f5f9;  /* Light gray when inactive */
             border: none;
             border-radius: 8px;
             color: #64748b;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.3s;  /* Smooth transition for hover and active states */
         }
 
+        /* Tab button hover effect */
         .tab-btn:hover {
-            background: #e2e8f0;
+            background: #e2e8f0;  /* Slightly darker gray on hover */
             color: #1e293b;
         }
 
+        /* Active tab styling - blue background with white text */
         .tab-btn.active {
-            background: #3b82f6;
+            background: #3b82f6;  /* Change this color to customize active tab appearance */
             color: white;
         }
 
+        /* Hide inactive tab content */
         .tab-content {
             display: none;
         }
 
+        /* Show active tab content */
         .tab-content.active {
             display: block;
         }
         
+        /* ========================================
+           PAGE LAYOUT & TYPOGRAPHY
+           ======================================== */
+        
         body {
+            /* System font stack for native look on each OS */
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            /* Gradient background from light to slightly darker gray */
             background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
             padding: 20px;
-            min-height: 100vh;
+            min-height: 100vh;  /* Full viewport height minimum */
         }
         
+        /* Main content container with max width for readability */
         .container {
-            max-width: 1400px;
+            max-width: 1400px;  /* Adjust this to change page width (e.g., 1600px for wider layout) */
             margin: 0 auto;
         }
         
@@ -71,17 +99,24 @@
             margin-bottom: 30px;
         }
         
+        /* Main page title */
         h1 {
-            font-size: 2.5rem;
+            font-size: 2.5rem;  /* Change to 3rem for larger title */
             color: #1e293b;
             margin-bottom: 8px;
         }
         
+        /* Subtitle text below main title */
         .subtitle {
             color: #64748b;
             font-size: 1.1rem;
         }
         
+        /* ========================================
+           FILE UPLOAD SECTION
+           ======================================== */
+        
+        /* Container for file upload area */
         .upload-section {
             background: white;
             padding: 25px;
@@ -91,17 +126,20 @@
             text-align: center;
         }
         
+        /* Wrapper for custom file input button */
         .file-input-wrapper {
             position: relative;
             display: inline-block;
         }
         
+        /* Hide default file input (replaced with custom button) */
         input[type="file"] {
             display: none;
         }
         
+        /* Custom upload button styling */
         .upload-btn {
-            background: #3b82f6;
+            background: #3b82f6;  /* Blue - change to #10b981 for green, #8b5cf6 for purple */
             color: white;
             padding: 12px 30px;
             border-radius: 8px;
@@ -112,18 +150,25 @@
             transition: all 0.3s;
         }
         
+        /* Upload button hover effect with lift animation */
         .upload-btn:hover {
-            background: #2563eb;
-            transform: translateY(-2px);
+            background: #2563eb;  /* Darker blue on hover */
+            transform: translateY(-2px);  /* Lift effect */
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
         }
         
+        /* File information display text */
         .file-info {
             margin-top: 15px;
             color: #64748b;
             font-size: 0.9rem;
         }
         
+        /* ========================================
+           DATE FILTER & PERIOD SELECTION
+           ======================================== */
+        
+        /* Container for date filters and period buttons */
         .filter-section {
             background: white;
             padding: 20px;
@@ -133,19 +178,22 @@
             display: flex;
             gap: 15px;
             align-items: center;
-            flex-wrap: wrap;
+            flex-wrap: wrap;  /* Wrap to multiple lines on smaller screens */
         }
         
+        /* Label styling for filter section */
         .filter-label {
             font-weight: 600;
             color: #475569;
         }
         
+        /* Container for Daily/Weekly/Monthly buttons */
         .period-buttons {
             display: flex;
             gap: 10px;
         }
         
+        /* Individual period button (Daily, Weekly, Monthly) */
         .period-btn {
             padding: 10px 20px;
             border: 2px solid #e2e8f0;
@@ -157,23 +205,27 @@
             transition: all 0.3s;
         }
         
+        /* Period button hover state */
         .period-btn:hover {
             border-color: #3b82f6;
             color: #3b82f6;
         }
         
+        /* Active period button styling */
         .period-btn.active {
             background: #3b82f6;
             color: white;
             border-color: #3b82f6;
         }
         
+        /* Container for start and end date inputs */
         .date-range {
             display: flex;
             gap: 10px;
             align-items: center;
         }
         
+        /* Date input field styling */
         .date-range input {
             padding: 8px 12px;
             border: 2px solid #e2e8f0;
@@ -181,68 +233,89 @@
             font-size: 0.9rem;
         }
         
+        /* ========================================
+           METRIC CARDS (KPI TILES)
+           ======================================== */
+        
+        /* Grid layout for metric cards - auto-fits to screen width */
         .metrics-grid {
             display: grid;
+            /* Minimum 250px per card, fills available space. Change minmax(250px, 1fr) to minmax(300px, 1fr) for larger cards */
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
         }
         
+        /* Individual metric card styling */
         .metric-card {
             background: white;
             padding: 25px;
             border-radius: 12px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            border-left: 4px solid;
+            border-left: 4px solid;  /* Colored left border for visual distinction */
         }
         
+        /* Clickable metric cards (used for Statistics tiles) */
         .metric-card.clickable {
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
         }
         
+        /* Hover effect for clickable cards - lifts card */
         .metric-card.clickable:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 12px rgba(0,0,0,0.15);
         }
         
+        /* Color classes for left border - customize these hex values to change card colors */
         .metric-card.blue { border-left-color: #3b82f6; }
         .metric-card.purple { border-left-color: #a855f7; }
         .metric-card.red { border-left-color: #ef4444; }
         .metric-card.green { border-left-color: #10b981; }
         
+        /* Metric card label text (e.g., "Total Boxes") */
         .metric-label {
             color: #64748b;
             font-size: 0.9rem;
             margin-bottom: 8px;
         }
         
+        /* Large number display in metric cards */
         .metric-value {
-            font-size: 2.5rem;
+            font-size: 2.5rem;  /* Adjust to 3rem for larger numbers */
             font-weight: bold;
             color: #1e293b;
         }
         
+        /* Optional metric change indicator (e.g., "+5.2%") */
         .metric-change {
-            color: #10b981;
+            color: #10b981;  /* Green for positive change */
             font-size: 0.85rem;
             font-weight: 600;
             margin-top: 5px;
         }
         
+        /* Date range display text in metric cards */
         .date-display {
             color: #64748b;
             font-size: 0.85rem;
             margin-top: 5px;
         }
         
+        /* ========================================
+           CHART CARDS & CONTAINERS
+           ======================================== */
+        
+        /* Grid layout for chart cards - responsive 2-column layout */
         .charts-grid {
             display: grid;
+            /* Minimum 500px per chart. Change to minmax(400px, 1fr) for smaller charts */
             grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
         }
         
+        /* Individual chart card container */
         .chart-card {
             background: white;
             padding: 25px;
@@ -250,6 +323,7 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         
+        /* Chart title styling */
         .chart-title {
             font-size: 1.25rem;
             font-weight: bold;
@@ -257,7 +331,10 @@
             margin-bottom: 20px;
         }
 
-        /* TTM Analytics Styles */
+        /* ========================================
+           TTM ANALYTICS - CHECKBOX SELECTOR
+           ======================================== */
+        /* Flexbox container for chart with sidebar selector */
         .chart-content {
             display: flex;
             gap: 20px;
@@ -265,22 +342,25 @@
             width: 100%;
         }
         
+        /* TTM/Employee checkbox selector sidebar */
         .ttm-selector {
             flex-shrink: 0;
-            width: 220px;
-            max-height: 600px;
-            overflow-y: auto;
+            width: 220px;  /* Change to 250px for wider selector */
+            max-height: 600px;  /* Adjust to 800px for taller selector */
+            overflow-y: auto;  /* Scrollable if content exceeds max-height */
             border: 2px solid #e2e8f0;
             border-radius: 8px;
             padding: 15px;
             background: #f8fafc;
         }
         
+        /* Chart container takes remaining space */
         .chart-content .chart-container {
             flex: 1;
-            min-width: 0;
+            min-width: 0;  /* Prevents flex item from overflowing */
         }
         
+        /* Selector section heading */
         .ttm-selector h4 {
             margin-bottom: 15px;
             color: #1e293b;
@@ -289,6 +369,7 @@
             padding-bottom: 8px;
         }
         
+        /* Individual checkbox item in selector */
         .ttm-checkbox {
             display: flex;
             align-items: center;
@@ -814,20 +895,49 @@
     </div>
 
     <script>
+        /* ========================================
+           GLOBAL STATE VARIABLES
+           ======================================== */
+        
+        // Chart.js instances stored by chart name for updating/destroying
         let charts = {};
-        let allData = [];
-        let allErrors = [];
-        let allReceived = [];
-        let allStatistics = [];
-        let allPickers = [];
+        
+        // Main data arrays loaded from Excel or localStorage
+        let allData = [];           // Shipments data (Date, TTM, Customer, Boxes, Pallets, ft²)
+        let allErrors = [];         // Errors data (Date, TTM)
+        let allReceived = [];       // Receiving data (Date, Receiver, Pallets, ft²)
+        let allStatistics = [];     // Statistics data (Item No., Quantities by location, Pallet counts)
+        let allPickers = [];        // List of TTM names designated as pickers (pre-selects them in charts)
+        
+        // TTM Analytics tab chart instance
         let ttmChart = null;
+        
+        // Selected TTM names for TTM Analytics chart (Set for unique values)
         let selectedTTMs = new Set();
+        
+        // Selected employee names for Dashboard employee trend chart (Set for unique values)
         let selectedEmployees = new Set();
+        
+        // Current aggregation period: 'daily', 'weekly', or 'monthly'
+        // Change default to 'weekly' or 'monthly' to start with different aggregation
         let currentPeriod = 'daily';
+        
+        // Chart.js instance for customer breakdown modal pie chart
         let customerModalChart = null;
+        
+        // Current table sort state (column name and direction)
+        // Determines which column is sorted and whether ascending or descending
         let currentSort = { column: 'name', direction: 'asc' };
         
-        // Sample data with dates
+        /* ========================================
+           SAMPLE DATA GENERATION (FOR DEMO MODE)
+           ======================================== */
+        
+        /**
+         * Generates sample shipment data for demo/testing purposes
+         * Used when no Excel file is loaded
+         * @returns {Array} Array of sample shipment records
+         */
         function generateSampleData() {
             const employees = ['John M.', 'Sarah K.', 'Mike R.', 'Lisa P.', 'David L.', 'Emma W.'];
             const customers = ['Acme Corp', 'Tech Solutions Inc', 'Global Industries', 'MegaMart', 'Supply Chain Co', 'Retail Giant', 'Manufacturing Ltd', 'Distribution Pro', 'Logistics Plus', 'Warehouse Direct', 'Quick Ship', 'Fast Track'];
@@ -881,9 +991,22 @@
             return errors;
         }
         
-        // Try to load data from localStorage first
+        /* ========================================
+           DATA PERSISTENCE (localStorage)
+           ======================================== */
+        
+        /**
+         * Attempts to load previously cached data from browser's localStorage
+         * This allows data to persist between page refreshes without re-uploading Excel file
+         * 
+         * @returns {boolean} true if data was successfully loaded, false otherwise
+         * 
+         * Note: localStorage has a size limit (typically 5-10MB). For very large datasets,
+         * consider using IndexedDB instead by replacing localStorage.getItem/setItem
+         */
         function loadDataFromStorage() {
             try {
+                // Retrieve all data from localStorage
                 const storedShipments = localStorage.getItem('shippingData');
                 const storedErrors = localStorage.getItem('errorData');
                 const storedReceived = localStorage.getItem('receivedData');
@@ -892,10 +1015,13 @@
                 const fileName = localStorage.getItem('dataFileName');
                 const loadTime = localStorage.getItem('dataLoadedTime');
                 
+                // Only proceed if core data exists (shipments, errors, received are required)
                 if (storedShipments && storedErrors && storedReceived) {
+                    // Parse JSON strings back to JavaScript objects/arrays
                     allData = JSON.parse(storedShipments);
                     allErrors = JSON.parse(storedErrors);
                     allReceived = JSON.parse(storedReceived);
+                    // Statistics and pickers are optional, default to empty arrays
                     allStatistics = storedStatistics ? JSON.parse(storedStatistics) : [];
                     allPickers = storedPickers ? JSON.parse(storedPickers) : [];
                     
@@ -923,23 +1049,49 @@
             allReceived = []; // No sample received data
         }
         
+        /* ========================================
+           EXCEL FILE UPLOAD & PARSING
+           ======================================== */
+        
+        /**
+         * Handles Excel file upload and parsing
+         * Reads Excel file, validates required sheets, parses data, and updates dashboard
+         * 
+         * Required Excel sheets:
+         * - Shipments: Date, TTM, Customer, Boxes Picked, Pallets Picked, ft²
+         * - Errors: Date, TTM
+         * - Received: Date, Receiver, Pallets, ft²
+         * - Statistics: Item No., Quantity TOR/QUATOR/CLAIMSTOR/CAL/QUACAL/CLAIMSCAL, Pallet Count TOR/CAL
+         * - Pickers: TTM (list of picker names for pre-selection in charts)
+         * 
+         * @param {Event} event - File input change event
+         */
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
             
+            // Update UI to show loading state
             document.getElementById('fileInfo').textContent = `Loading ${file.name}...`;
             document.getElementById('fileInfo2').textContent = `Loading ${file.name}...`;
             
+            // FileReader API to read file as binary
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
+                    // Convert to Uint8Array for XLSX library
                     const data = new Uint8Array(e.target.result);
+                    // Parse Excel workbook
                     const workbook = XLSX.read(data, { type: 'array' });
                     
-                    // Debug: Log available sheet names
+                    // Debug: Log available sheet names for troubleshooting
                     console.log('Available sheets:', workbook.SheetNames);
                     
-                    // Look for the "Shipments" sheet specifically
+                    /* ========================================
+                       SHEET VALIDATION
+                       Ensure all required sheets exist in workbook
+                       ======================================== */
+                    
+                    // Validate "Shipments" sheet exists
                     const shipmentsSheet = workbook.Sheets['Shipments'];
                     if (!shipmentsSheet) {
                         throw new Error('Sheet "Shipments" not found. Please ensure your Excel file has a sheet named "Shipments". Available sheets: ' + workbook.SheetNames.join(', '));
@@ -1270,13 +1422,36 @@
             updateDashboard();
         }
         
+        /* ========================================
+           DATE FILTERING FUNCTIONS
+           ======================================== */
+        
+        /**
+         * Filters shipment data by date range
+         * Automatically uses appropriate date inputs based on active tab
+         * 
+         * @returns {Array} Filtered shipment data
+         * 
+         * Date input behavior:
+         * - Dashboard tab: Uses startDate and endDate
+         * - Analytics tab: Uses startDate2 and endDate2
+         * - No dates set: Returns all data (unfiltered)
+         * 
+         * Date comparison: Uses string comparison (YYYY-MM-DD format)
+         * This works correctly because ISO date format is lexicographically sortable
+         * 
+         * To add additional filters (e.g., by customer or employee):
+         * Add filter conditions after date filtering, e.g.:
+         * filtered = filtered.filter(d => d.customer === selectedCustomer);
+         */
         function getFilteredData() {
+            // Get date values from both tab's date inputs
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
             const startDate2 = document.getElementById('startDate2').value;
             const endDate2 = document.getElementById('endDate2').value;
             
-            // Use analytics tab dates if on analytics tab
+            // Determine which date inputs to use based on active tab
             const activeTab = document.querySelector('.tab-content.active');
             const useAnalyticsDates = activeTab && activeTab.id === 'analytics-tab';
             
@@ -1286,7 +1461,7 @@
             console.log('Date range - Start:', actualStartDate, 'End:', actualEndDate);
             console.log('All data length:', allData.length);
             
-            // If no date filters are set, return all data
+            // No filtering if no dates specified
             if (!actualStartDate && !actualEndDate) {
                 console.log('No date filters - returning all data');
                 return allData;
@@ -1294,9 +1469,11 @@
             
             let filtered = allData;
             
+            // Apply start date filter (inclusive)
             if (actualStartDate) {
                 filtered = filtered.filter(d => d.date && d.date >= actualStartDate);
             }
+            // Apply end date filter (inclusive)
             if (actualEndDate) {
                 filtered = filtered.filter(d => d.date && d.date <= actualEndDate);
             }
@@ -1306,17 +1483,26 @@
             return filtered;
         }
         
+        /**
+         * Filters error data by date range (Dashboard tab dates only)
+         * 
+         * @returns {Array} Filtered error data
+         * 
+         * Note: Errors use Dashboard tab dates, not Analytics tab dates
+         * Errors are only displayed on the Dashboard tab
+         */
         function getFilteredErrors() {
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
             
-            // If no date filters are set, return all errors
+            // No filtering if no dates specified
             if (!startDate && !endDate) {
                 return allErrors;
             }
             
             let filtered = allErrors;
             
+            // Apply date filters (inclusive on both ends)
             if (startDate) {
                 filtered = filtered.filter(d => d.date && d.date >= startDate);
             }
@@ -1327,17 +1513,28 @@
             return filtered;
         }
         
+        /**
+         * Filters receiving data by date range (Dashboard tab dates only)
+         * 
+         * @returns {Array} Filtered receiving data
+         * 
+         * Receiving data is used for:
+         * - "Total ft² Received" metric tile
+         * - Background shading on employee trend charts
+         * - "# Pallets Rcvd" column in performance table
+         */
         function getFilteredReceived() {
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
             
-            // If no date filters are set, return all received
+            // No filtering if no dates specified
             if (!startDate && !endDate) {
                 return allReceived;
             }
             
             let filtered = allReceived;
             
+            // Apply date filters (inclusive on both ends)
             if (startDate) {
                 filtered = filtered.filter(d => d.date && d.date >= startDate);
             }
@@ -1392,33 +1589,64 @@
             };
         }
         
+        /* ========================================
+           DATA AGGREGATION BY TIME PERIOD
+           ======================================== */
+        
+        /**
+         * Aggregates shipment data by selected time period (daily/weekly/monthly)
+         * Combines data by employee and calculates totals
+         * 
+         * @param {Array} data - Filtered shipment data
+         * @param {Object} errorStats - Error counts and accuracy rates by TTM
+         * @param {Array} receivedData - Filtered receiving data for pallets received calculation
+         * @returns {Array} Aggregated employee data with totals
+         * 
+         * Aggregation keys:
+         * - Daily: employee-date (e.g., "John M.-2025-10-15")
+         * - Weekly: employee-week start date (Sunday)
+         * - Monthly: employee-year-month (e.g., "John M.-2025-10")
+         * 
+         * To add a new aggregation period (e.g., quarterly):
+         * 1. Add new currentPeriod value check
+         * 2. Calculate quarter: Math.floor(date.getMonth() / 3) + 1
+         * 3. Create key: `${row.name}-${date.getFullYear()}-Q${quarter}`
+         * 4. Add period button in HTML
+         */
         function aggregateByPeriod(data, errorStats, receivedData) {
             const grouped = {};
             
+            // First pass: Group data by employee and period
             data.forEach(row => {
                 let key;
                 const date = new Date(row.date);
                 
+                // Generate grouping key based on selected period
                 if (currentPeriod === 'daily') {
+                    // One entry per employee per day
                     key = `${row.name}-${row.date}`;
                 } else if (currentPeriod === 'weekly') {
+                    // Calculate week start (Sunday)
                     const weekStart = new Date(date);
                     weekStart.setDate(date.getDate() - date.getDay());
                     key = `${row.name}-${weekStart.toISOString().split('T')[0]}`;
                 } else { // monthly
+                    // One entry per employee per month
                     key = `${row.name}-${date.getFullYear()}-${date.getMonth() + 1}`;
                 }
                 
+                // Initialize group if doesn't exist
                 if (!grouped[key]) {
                     grouped[key] = {
                         name: row.name,
                         boxes: 0,
                         pallets: 0,
                         sqft: 0,
-                        days: 0
+                        days: 0  // Track number of days in this period
                     };
                 }
                 
+                // Sum up metrics for this group
                 grouped[key].boxes += row.boxes;
                 grouped[key].pallets += row.pallets;
                 grouped[key].sqft += row.sqft;
@@ -1466,11 +1694,28 @@
             return Object.values(byEmployee);
         }
         
+        /* ========================================
+           MAIN DASHBOARD UPDATE ORCHESTRATOR
+           ======================================== */
+        
+        /**
+         * Main function that updates all dashboard components
+         * Called whenever data changes (file upload, date filter, period selection)
+         * 
+         * Process flow:
+         * 1. Filter data by date range
+         * 2. Calculate error statistics
+         * 3. Aggregate data by selected period (daily/weekly/monthly)
+         * 4. Update metric cards, charts, and table
+         * 
+         * Example: To add a new chart, call your update function here after updateTable()
+         */
         function updateDashboard() {
             console.log('=== UPDATE DASHBOARD CALLED ===');
             console.log('allData length:', allData.length);
             console.log('allErrors length:', allErrors.length);
             
+            // Apply date filters to get relevant data
             const filteredData = getFilteredData();
             const filteredErrors = getFilteredErrors();
             const filteredReceivedData = getFilteredReceived();
@@ -1478,48 +1723,72 @@
             console.log('Filtered errors:', filteredErrors.length, 'records');
             console.log('Sample filtered record:', filteredData[0]);
             
+            // Validation: Ensure we have data to display
             if (filteredData.length === 0) {
                 console.warn('WARNING: No filtered data available!');
                 alert('No data available after filtering. Check your date range or data file.');
                 return;
             }
             
+            // Calculate error rates and accuracy by employee
             const errorStats = calculateErrorsAndAccuracy(filteredData, filteredErrors);
+            
+            // Aggregate shipment data by employee and selected period
             const aggregatedData = aggregateByPeriod(filteredData, errorStats, filteredReceivedData);
             console.log('Aggregated data:', aggregatedData.length, 'employees');
             console.log('Sample aggregated record:', aggregatedData[0]);
             
+            // Validation: Ensure aggregation succeeded
             if (aggregatedData.length === 0) {
                 console.warn('WARNING: No aggregated data!');
                 alert('No aggregated data available. Check console for details.');
                 return;
             }
             
-            updateMetrics(aggregatedData, filteredData);
-            updateCharts(aggregatedData, filteredData);
-            updateTable(aggregatedData);
+            // Update all dashboard components
+            updateMetrics(aggregatedData, filteredData);  // Update KPI tiles
+            updateCharts(aggregatedData, filteredData);   // Update all charts
+            updateTable(aggregatedData);                  // Update performance table
             console.log('=== DASHBOARD UPDATE COMPLETE ===');
         }
         
+        /**
+         * Updates metric cards (KPI tiles) at top of dashboard
+         * Calculates and displays totals for boxes, pallets, sq ft, errors, and accuracy
+         * 
+         * @param {Array} data - Aggregated employee data with totals
+         * @param {Array} rawData - Raw filtered shipment data for additional calculations
+         * 
+         * To add a new metric tile:
+         * 1. Calculate the value here (e.g., const totalCustomers = new Set(rawData.map(r => r.customer)).size)
+         * 2. Update the HTML display (e.g., document.getElementById('totalCustomers').textContent = totalCustomers)
+         * 3. Add corresponding HTML metric-card in the dashboard
+         */
         function updateMetrics(data, rawData) {
+            // Sum totals across all employees
             const totalBoxes = data.reduce((sum, emp) => sum + emp.boxes, 0);
             const totalPallets = data.reduce((sum, emp) => sum + emp.pallets, 0);
             const totalErrors = data.reduce((sum, emp) => sum + emp.errors, 0);
             const totalSqft = data.reduce((sum, emp) => sum + emp.sqft, 0);
             const totalLinesShipped = data.reduce((sum, emp) => sum + emp.linesShipped, 0);
-            // Calculate average error rate then convert to accuracy rate (100 - error rate)
+            
+            // Calculate average error rate, then convert to accuracy rate (100 - error rate)
             const avgErrorRate = data.reduce((sum, emp) => sum + parseFloat(emp.accuracy), 0) / data.length;
             const avgAccuracy = (100 - avgErrorRate).toFixed(2);
+            
+            // Overall error rate as percentage of lines shipped
             const errorRate = totalLinesShipped > 0 ? ((totalErrors / totalLinesShipped) * 100).toFixed(2) : '0.00';
             
-            // Calculate total ft² received
+            // Calculate total ft² received from filtered receiving data
             const filteredReceivedData = getFilteredReceived();
             const totalSqftReceived = filteredReceivedData.reduce((sum, row) => sum + (row.sqft || 0), 0);
             
+            // Get date range for display
             const startDate = document.getElementById('startDate').value || 'All';
             const endDate = document.getElementById('endDate').value || 'All';
             const dateRangeText = `${startDate} to ${endDate}`;
             
+            // Update DOM elements with formatted numbers
             document.getElementById('totalBoxes').textContent = totalBoxes.toLocaleString();
             document.getElementById('totalPallets').textContent = totalPallets.toLocaleString();
             document.getElementById('totalSqft').textContent = totalSqft.toLocaleString();
@@ -1527,23 +1796,41 @@
             document.getElementById('errorRate').textContent = errorRate + '%';
             document.getElementById('avgAccuracy').textContent = avgAccuracy + '%';
             
+            // Update date range display on all metric cards
             document.querySelectorAll('.date-display').forEach(el => {
                 el.textContent = dateRangeText;
             });
         }
         
+        /**
+         * Updates Statistics metric tiles (Total ft² TOR/CAL, Total Pallets TOR/CAL)
+         * These metrics are NOT date-filtered - they show current totals from Statistics sheet
+         * 
+         * Calculations:
+         * - TOR ft² = sum of (Quantity TOR + Quantity QUATOR + Quantity CLAIMSTOR)
+         * - CAL ft² = sum of (Quantity CAL + Quantity QUACAL + Quantity CLAIMSCAL)
+         * - Pallets = direct sum of Pallet Count columns
+         * 
+         * To change location names or add new locations:
+         * 1. Update the column mappings in Excel sheet parsing
+         * 2. Update the calculation logic here
+         * 3. Update the modal display logic in openStatisticsModal()
+         */
         function updateStatisticsMetrics() {
+            // Early return if no statistics data available
             if (!allStatistics || allStatistics.length === 0) {
                 return;
             }
             
-            // Calculate totals
+            // Initialize totals
             let totalSqftTOR = 0;
             let totalSqftCAL = 0;
             let totalPalletsTOR = 0;
             let totalPalletsCAL = 0;
             
+            // Sum across all items in statistics sheet
             allStatistics.forEach(item => {
+                // TOR total includes three sub-locations
                 totalSqftTOR += (item.quantityTOR || 0) + (item.quantityQUATOR || 0) + (item.quantityCLAIMSTOR || 0);
                 totalSqftCAL += (item.quantityCAL || 0) + (item.quantityQUACAL || 0) + (item.quantityCLAIMSCAL || 0);
                 totalPalletsTOR += (item.palletCountTOR || 0);
@@ -1565,23 +1852,47 @@
                         'CAL ft²:', Math.round(totalSqftCAL), 'CAL Pallets:', Math.round(totalPalletsCAL));
         }
         
+        /* ========================================
+           STATISTICS MODAL - DRILL-DOWN DISPLAY
+           ======================================== */
+        
+        /**
+         * Opens modal showing top 10 items breakdown for a specific region and metric type
+         * Triggered when user clicks on Statistics metric tiles
+         * 
+         * @param {string} region - 'TOR' or 'CAL'
+         * @param {string} type - 'sqft' or 'pallets'
+         * 
+         * For ft² type: Shows breakdown by 3 sub-locations
+         * For pallets type: Shows total pallets only
+         * 
+         * To change top 10 to top 20:
+         * - Change itemsData = itemsData.slice(0, 10) to slice(0, 20)
+         * 
+         * To add a new region:
+         * 1. Add region condition in both if blocks (TOR/CAL)
+         * 2. Add corresponding Excel sheet columns
+         * 3. Add metric tiles in HTML
+         */
         function openStatisticsModal(region, type) {
+            // Validate statistics data exists
             if (!allStatistics || allStatistics.length === 0) {
                 alert('No statistics data available');
                 return;
             }
             
-            // Prepare data based on type
+            // Array to store processed item data
             let itemsData = [];
             
             if (type === 'sqft') {
-                // Calculate total ft² per item for the specified region
+                // Process square footage data with location breakdown
                 allStatistics.forEach(item => {
                     let total = 0;
                     let location1 = 0;
                     let location2 = 0;
                     let location3 = 0;
                     
+                    // Map region to corresponding quantity columns
                     if (region === 'TOR') {
                         location1 = item.quantityTOR || 0;
                         location2 = item.quantityQUATOR || 0;
@@ -1592,8 +1903,10 @@
                         location3 = item.quantityCLAIMSCAL || 0;
                     }
                     
+                    // Calculate total across all sub-locations
                     total = location1 + location2 + location3;
                     
+                    // Only include items with non-zero totals
                     if (total > 0) {
                         itemsData.push({
                             itemNo: item.itemNo,
@@ -1605,9 +1918,9 @@
                     }
                 });
                 
-                // Sort by total descending and take top 10
+                // Sort by total (highest first) and limit to top 10
                 itemsData.sort((a, b) => b.total - a.total);
-                itemsData = itemsData.slice(0, 10);
+                itemsData = itemsData.slice(0, 10);  // Change to slice(0, 20) for top 20
                 
                 // Build table
                 const locationNames = region === 'TOR' ? ['TOR', 'QUATOR', 'CLAIMSTOR'] : ['CAL', 'QUACAL', 'CLAIMSCAL'];
@@ -2078,45 +2391,76 @@
             
         }
         
+        /**
+         * Handles table column sorting when user clicks on a header
+         * Toggles between ascending and descending order
+         * Updates visual indicators (arrows) to show current sort state
+         * 
+         * @param {string} column - Column name to sort by (matches data object property names)
+         *                          Valid values: 'name', 'boxes', 'pallets', 'errors', 'sqft', 
+         *                          'accuracy', 'linesShipped', 'palletsReceived'
+         * 
+         * Example: To make errors sort descending by default, check if column === 'errors' 
+         * and set currentSort.direction = 'desc'
+         */
         function sortTable(column) {
-            // Toggle sort direction if same column
+            // Toggle sort direction if clicking the same column again
             if (currentSort.column === column) {
                 currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
             } else {
+                // New column - start with ascending sort
                 currentSort.column = column;
                 currentSort.direction = 'asc';
             }
             
-            // Update sort indicators
+            // Clear all sort indicators from headers
             document.querySelectorAll('th.sortable').forEach(th => {
                 th.classList.remove('active');
                 const indicator = th.querySelector('.sort-indicator');
                 if (indicator) indicator.textContent = '';
             });
             
+            // Set active indicator on currently sorted column
             const activeHeader = document.querySelector(`th.sortable[onclick*="${column}"]`);
             if (activeHeader) {
                 activeHeader.classList.add('active');
                 const indicator = activeHeader.querySelector('.sort-indicator');
                 if (indicator) {
+                    // Show up arrow for ascending, down arrow for descending
                     indicator.textContent = currentSort.direction === 'asc' ? '▲' : '▼';
                 }
             }
             
-            // Re-render the table with current filters
+            // Re-render the table with new sort order
             updateDashboard();
         }
         
+        /**
+         * Updates the Employee Performance Details table
+         * Applies current sort settings and renders rows with color-coded badges
+         * 
+         * @param {Array} data - Aggregated employee data to display
+         * 
+         * Badge Color Thresholds (customize these values):
+         * - Errors: green (<=2), yellow (3-5), red (>5)
+         * - Accuracy: green (>=97%), yellow (95-97%), red (<95%)
+         * 
+         * To add a new column:
+         * 1. Add <th> in HTML table header with onclick="sortTable('newColumn')"
+         * 2. Add data calculation in aggregateByPeriod() function
+         * 3. Add <td> here in row.innerHTML with ${emp.newColumn}
+         */
         function updateTable(data) {
             const tbody = document.getElementById('tableBody');
-            tbody.innerHTML = '';
+            tbody.innerHTML = '';  // Clear existing rows
             
             // Sort data based on current sort settings
             const sortedData = [...data].sort((a, b) => {
                 let aVal = a[currentSort.column];
                 let bVal = b[currentSort.column];
                 
-                // Special handling for accuracy (which is stored as error rate)
+                // Special handling for accuracy (stored internally as error rate)
+                // Convert to accuracy percentage for sorting
                 if (currentSort.column === 'accuracy') {
                     aVal = 100 - parseFloat(a.accuracy);
                     bVal = 100 - parseFloat(b.accuracy);
@@ -2124,23 +2468,31 @@
                 
                 // Handle string vs number comparison
                 if (typeof aVal === 'string') {
+                    // Use localeCompare for case-insensitive alphabetical sorting
                     return currentSort.direction === 'asc' 
                         ? aVal.localeCompare(bVal)
                         : bVal.localeCompare(aVal);
                 } else {
+                    // Numeric comparison
                     return currentSort.direction === 'asc' 
                         ? aVal - bVal
                         : bVal - aVal;
                 }
             });
             
+            // Render employee rows
             sortedData.forEach(emp => {
                 const row = tbody.insertRow();
+                
                 // Convert error rate to accuracy rate: 100 - error rate
                 const errorRate = parseFloat(emp.accuracy);
                 const accuracyRate = 100 - errorRate;
-                // Higher accuracy is better
+                
+                // Determine badge color based on accuracy thresholds
+                // Change thresholds: accuracyRate >= 99 for stricter standard
                 const accuracyBadge = accuracyRate >= 97 ? 'green' : accuracyRate >= 95 ? 'yellow' : 'red';
+                
+                // Build row HTML with color-coded badges
                 row.innerHTML = `
                     <td><strong>${emp.name}</strong></td>
                     <td>${emp.boxes.toLocaleString()}</td>
@@ -2314,35 +2666,68 @@
             }
         }
 
-        // Tab functions
+        /* ========================================
+           TAB NAVIGATION
+           ======================================== */
+        
+        /**
+         * Switches between Dashboard and TTM Analytics tabs
+         * Updates button states and content visibility
+         * Refreshes charts for the active tab
+         * 
+         * @param {string} tabId - ID of tab to show ('dashboard' or 'analytics')
+         * 
+         * To add a new tab:
+         * 1. Add tab button in HTML with onclick="showTab('newtab')"
+         * 2. Add tab content div with id="newtab-tab" and class="tab-content"
+         * 3. Add condition here to update charts for new tab if needed
+         */
         function showTab(tabId) {
-            // Update button states
+            // Deactivate all tab buttons
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('active');
+                // Activate button matching the selected tab
                 if (btn.textContent.toLowerCase().includes(tabId)) {
                     btn.classList.add('active');
                 }
             });
 
-            // Update content visibility
+            // Hide all tab content
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
             });
+            // Show selected tab content
             document.getElementById(`${tabId}-tab`).classList.add('active');
 
-            // Update charts if needed
+            // Refresh charts for the active tab
             if (tabId === 'analytics') {
-                updateAnalytics();
+                updateAnalytics();  // Update TTM Analytics charts
             } else {
-                updateDashboard();
+                updateDashboard();  // Update Dashboard charts
             }
         }
 
-        // TTM Analytics functions
+        /* ========================================
+           TTM ANALYTICS - CHECKBOX MANAGEMENT
+           ======================================== */
+        
+        /**
+         * Populates the TTM selector checkboxes in the Analytics tab
+         * Pre-selects pickers from the Pickers sheet on first load
+         * 
+         * Selection behavior:
+         * - First time: Pre-selects only TTMs listed in Pickers sheet
+         * - If no Pickers sheet: Selects all TTMs by default
+         * - After first load: Maintains user's checkbox selections
+         * 
+         * To change default selection behavior:
+         * - Remove the allPickers check to always select all TTMs
+         * - Add additional criteria (e.g., only TTMs with sqft > 5000)
+         */
         function populateTTMCheckboxes() {
             const filteredData = getFilteredData();
             
-            // Get unique TTM names
+            // Aggregate square footage by TTM name
             const ttmData = {};
             filteredData.forEach(row => {
                 if (!ttmData[row.name]) {
@@ -2351,24 +2736,25 @@
                 ttmData[row.name] += row.sqft;
             });
             
+            // Get unique TTM names sorted alphabetically
             const ttmNames = Object.keys(ttmData).sort((a, b) => a.localeCompare(b));
             
-            // If this is the first time, select only pickers (if available), otherwise select all
+            // On first load, pre-select pickers if available
             if (selectedTTMs.size === 0) {
                 if (allPickers && allPickers.length > 0) {
-                    // Pre-select only pickers
+                    // Pre-select only TTMs listed in Pickers sheet
                     ttmNames.forEach(name => {
                         if (allPickers.includes(name)) {
                             selectedTTMs.add(name);
                         }
                     });
                 } else {
-                    // No pickers data, select all
+                    // No pickers data available - select all TTMs
                     ttmNames.forEach(name => selectedTTMs.add(name));
                 }
             }
             
-            // Create checkboxes
+            // Clear and rebuild checkbox container
             const container = document.getElementById('ttmCheckboxes');
             container.innerHTML = '';
             
