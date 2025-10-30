@@ -196,6 +196,16 @@
             border-left: 4px solid;
         }
         
+        .metric-card.clickable {
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .metric-card.clickable:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        
         .metric-card.blue { border-left-color: #3b82f6; }
         .metric-card.purple { border-left-color: #a855f7; }
         .metric-card.red { border-left-color: #ef4444; }
@@ -373,6 +383,27 @@
             font-weight: 600;
             color: #475569;
             border-bottom: 2px solid #e2e8f0;
+        }
+        
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+        }
+        
+        th.sortable:hover {
+            background: #e2e8f0;
+        }
+        
+        .sort-indicator {
+            display: inline-block;
+            margin-left: 5px;
+            font-size: 0.7em;
+            opacity: 0.3;
+        }
+        
+        th.sortable.active .sort-indicator {
+            opacity: 1;
         }
         
         td {
@@ -597,6 +628,26 @@
                 <div class="metric-value" id="avgAccuracy">-</div>
                 <div class="date-display" id="accuracyDateRange"></div>
             </div>
+            <div class="metric-card purple clickable" onclick="openStatisticsModal('TOR', 'sqft')">
+                <div class="metric-label">Total ft² TOR</div>
+                <div class="metric-value" id="totalSqftTOR">-</div>
+                <div class="date-display">Click for details</div>
+            </div>
+            <div class="metric-card green clickable" onclick="openStatisticsModal('TOR', 'pallets')">
+                <div class="metric-label">Total Pallets TOR</div>
+                <div class="metric-value" id="totalPalletsTOR">-</div>
+                <div class="date-display">Click for details</div>
+            </div>
+            <div class="metric-card red clickable" onclick="openStatisticsModal('CAL', 'sqft')">
+                <div class="metric-label">Total ft² CAL</div>
+                <div class="metric-value" id="totalSqftCAL">-</div>
+                <div class="date-display">Click for details</div>
+            </div>
+            <div class="metric-card blue clickable" onclick="openStatisticsModal('CAL', 'pallets')">
+                <div class="metric-label">Total Pallets CAL</div>
+                <div class="metric-value" id="totalPalletsCAL">-</div>
+                <div class="date-display">Click for details</div>
+            </div>
         </div>
         
         <div class="charts-grid">
@@ -616,8 +667,18 @@
         
         <div class="chart-card" style="margin-bottom: 30px;">
             <h3 class="chart-title">📏 Square Footage Picked by Employee Over Time</h3>
-            <div style="position: relative; height: 400px;">
-                <canvas id="sqftTrendChart"></canvas>
+            <div class="chart-content">
+                <div class="ttm-selector">
+                    <h4>Select TTMs</h4>
+                    <div class="select-all-container">
+                        <button class="select-all-btn" onclick="selectAllEmployees()">Select All</button>
+                        <button class="deselect-all-btn" onclick="deselectAllEmployees()">Deselect All</button>
+                    </div>
+                    <div id="employeeCheckboxes"></div>
+                </div>
+                <div class="chart-container" style="height: 600px;">
+                    <canvas id="sqftTrendChart"></canvas>
+                </div>
             </div>
         </div>
         
@@ -648,14 +709,14 @@
             <table id="dataTable">
                 <thead>
                     <tr>
-                        <th>Employee</th>
-                        <th>Boxes</th>
-                        <th>Pallets</th>
-                        <th>Errors</th>
-                        <th>Sq Ft Shipped</th>
-                        <th>Accuracy</th>
-                        <th>Lines Shipped</th>
-                        <th># Pallets Rcvd</th>
+                        <th class="sortable" onclick="sortTable('name')">Employee <span class="sort-indicator">▲</span></th>
+                        <th class="sortable" onclick="sortTable('boxes')">Boxes <span class="sort-indicator"></span></th>
+                        <th class="sortable" onclick="sortTable('pallets')">Pallets <span class="sort-indicator"></span></th>
+                        <th class="sortable" onclick="sortTable('errors')">Errors <span class="sort-indicator"></span></th>
+                        <th class="sortable" onclick="sortTable('sqft')">Sq Ft Shipped <span class="sort-indicator"></span></th>
+                        <th class="sortable" onclick="sortTable('accuracy')">Accuracy <span class="sort-indicator"></span></th>
+                        <th class="sortable" onclick="sortTable('linesShipped')">Lines Shipped <span class="sort-indicator"></span></th>
+                        <th class="sortable" onclick="sortTable('palletsReceived')"># Pallets Rcvd <span class="sort-indicator"></span></th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
@@ -730,15 +791,41 @@
         </div>
     </div>
 
+    <!-- Statistics Breakdown Modal -->
+    <div id="statisticsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="statsModalTitle">Statistics Breakdown</h3>
+                <span class="close" onclick="closeStatisticsModal()">&times;</span>
+            </div>
+            <div class="table-card" style="padding: 0; box-shadow: none;">
+                <table id="statsTable">
+                    <thead>
+                        <tr id="statsTableHeader">
+                            <!-- Headers will be populated dynamically -->
+                        </tr>
+                    </thead>
+                    <tbody id="statsTableBody">
+                        <!-- Data will be populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <script>
         let charts = {};
         let allData = [];
         let allErrors = [];
         let allReceived = [];
+        let allStatistics = [];
+        let allPickers = [];
         let ttmChart = null;
         let selectedTTMs = new Set();
+        let selectedEmployees = new Set();
         let currentPeriod = 'daily';
         let customerModalChart = null;
+        let currentSort = { column: 'name', direction: 'asc' };
         
         // Sample data with dates
         function generateSampleData() {
@@ -800,6 +887,8 @@
                 const storedShipments = localStorage.getItem('shippingData');
                 const storedErrors = localStorage.getItem('errorData');
                 const storedReceived = localStorage.getItem('receivedData');
+                const storedStatistics = localStorage.getItem('statisticsData');
+                const storedPickers = localStorage.getItem('pickersData');
                 const fileName = localStorage.getItem('dataFileName');
                 const loadTime = localStorage.getItem('dataLoadedTime');
                 
@@ -807,6 +896,8 @@
                     allData = JSON.parse(storedShipments);
                     allErrors = JSON.parse(storedErrors);
                     allReceived = JSON.parse(storedReceived);
+                    allStatistics = storedStatistics ? JSON.parse(storedStatistics) : [];
+                    allPickers = storedPickers ? JSON.parse(storedPickers) : [];
                     
                 if (fileName && loadTime) {
                     const timeLoaded = new Date(loadTime).toLocaleString();
@@ -815,7 +906,8 @@
                 } else {
                     document.getElementById('fileInfo').textContent = `✓ Using cached data - ${allData.length} shipment records`;
                     document.getElementById('fileInfo2').textContent = `✓ Using cached data - ${allData.length} shipment records`;
-                }                    console.log('Loaded data from localStorage:', allData.length, 'shipments,', allErrors.length, 'errors,', allReceived.length, 'received');
+                }                    console.log('Loaded data from localStorage:', allData.length, 'shipments,', allErrors.length, 'errors,', allReceived.length, 'received,', allStatistics.length, 'statistics,', allPickers.length, 'pickers');
+                    updateStatisticsMetrics();
                     return true;
                 }
             } catch (e) {
@@ -865,9 +957,23 @@
                         throw new Error('Sheet "Received" not found. Please ensure your Excel file has a sheet named "Received". Available sheets: ' + workbook.SheetNames.join(', '));
                     }
                     
+                    // Look for the "Statistics" sheet
+                    const statisticsSheet = workbook.Sheets['Statistics'];
+                    if (!statisticsSheet) {
+                        throw new Error('Sheet "Statistics" not found. Please ensure your Excel file has a sheet named "Statistics". Available sheets: ' + workbook.SheetNames.join(', '));
+                    }
+                    
+                    // Look for the "Pickers" sheet
+                    const pickersSheet = workbook.Sheets['Pickers'];
+                    if (!pickersSheet) {
+                        throw new Error('Sheet "Pickers" not found. Please ensure your Excel file has a sheet named "Pickers". Available sheets: ' + workbook.SheetNames.join(', '));
+                    }
+                    
                     const jsonData = XLSX.utils.sheet_to_json(shipmentsSheet, {range: 1});// Start parsing from the second row (index 1)
                     const errorsData = XLSX.utils.sheet_to_json(errorsSheet, {range: 1});
                     const receivedData = XLSX.utils.sheet_to_json(receivedSheet, {range: 2}); // Skip extra header row
+                    const statisticsData = XLSX.utils.sheet_to_json(statisticsSheet, {range: 1});
+                    const pickersData = XLSX.utils.sheet_to_json(pickersSheet, {range: 1});
                     
                     console.log('Raw Shipments data count:', jsonData.length);
                     console.log('Sample row from Excel:', jsonData[0]);
@@ -878,6 +984,10 @@
                     console.log('Sample received row:', receivedData[0]);
                     console.log('Second received row:', receivedData[1]);
                     console.log('Third received row:', receivedData[2]);
+                    console.log('Raw Statistics data count:', statisticsData.length);
+                    console.log('Sample statistics row:', statisticsData[0]);
+                    console.log('Raw Pickers data count:', pickersData.length);
+                    console.log('Sample pickers row:', pickersData[0]);
                     
                     allData = jsonData.map(row => {
                         let dateValue = row['Date'] || row['date'] || row['DATE'];
@@ -1079,6 +1189,30 @@
                         console.log('First received after processing:', allReceived[0]);
                     }
                     
+                    // Process statistics data - just store as is, no date filtering needed
+                    allStatistics = statisticsData.map(row => ({
+                        itemNo: row['Item No.'] || row['item no.'] || row['ITEM NO.'] || 'Unknown',
+                        quantityTOR: parseFloat(row['Quantity TOR'] || row['quantity tor'] || 0) || 0,
+                        quantityQUATOR: parseFloat(row['Quantity QUATOR'] || row['quantity quator'] || 0) || 0,
+                        quantityCLAIMSTOR: parseFloat(row['Quantity CLAIMSTOR'] || row['quantity claimstor'] || 0) || 0,
+                        quantityCAL: parseFloat(row['Quantity CAL'] || row['quantity cal'] || 0) || 0,
+                        quantityQUACAL: parseFloat(row['Quantity QUACAL'] || row['quantity quacal'] || 0) || 0,
+                        quantityCLAIMSCAL: parseFloat(row['Quantity CLAIMSCAL'] || row['quantity claimscal'] || 0) || 0,
+                        palletCountTOR: parseFloat(row['Pallet Count TOR'] || row['pallet count tor'] || 0) || 0,
+                        palletCountCAL: parseFloat(row['Pallet Count CAL'] || row['pallet count cal'] || 0) || 0
+                    }));
+                    
+                    console.log('Total statistics records:', allStatistics.length);
+                    if (allStatistics.length > 0) {
+                        console.log('First statistics after processing:', allStatistics[0]);
+                    }
+                    
+                    // Process Pickers data
+                    allPickers = pickersData.map(row => row['TTM'] || row['ttm'] || row['Name'] || row['name']).filter(name => name);
+                    
+                    console.log('Total pickers:', allPickers.length);
+                    console.log('Picker names:', allPickers);
+                    
                     // Set date range based on data
                     const dates = allData.map(d => d.date).filter(d => d).sort();
                     if (dates.length > 0) {
@@ -1099,15 +1233,24 @@
                         localStorage.setItem('shippingData', JSON.stringify(allData));
                         localStorage.setItem('errorData', JSON.stringify(allErrors));
                         localStorage.setItem('receivedData', JSON.stringify(allReceived));
+                        localStorage.setItem('statisticsData', JSON.stringify(allStatistics));
+                        localStorage.setItem('pickersData', JSON.stringify(allPickers));
                         localStorage.setItem('dataLoadedTime', new Date().toISOString());
                         localStorage.setItem('dataFileName', file.name);
                     } catch (e) {
                         console.warn('Could not save data to localStorage:', e);
                     }
                     
-                    document.getElementById('fileInfo').textContent = `✓ Loaded ${file.name} - ${allData.length} shipment records, ${allErrors.length} error records, ${allReceived.length} received records`;
-                    document.getElementById('fileInfo2').textContent = `✓ Loaded ${file.name} - ${allData.length} shipment records, ${allErrors.length} error records, ${allReceived.length} received records`;
+                    // Reset selections for new data load
+                    selectedEmployees.clear();
+                    selectedTTMs.clear();
+                    document.getElementById('employeeCheckboxes').innerHTML = '';
+                    document.getElementById('ttmCheckboxes').innerHTML = '';
+                    
+                    document.getElementById('fileInfo').textContent = `✓ Loaded ${file.name} - ${allData.length} shipment records, ${allErrors.length} error records, ${allReceived.length} received records, ${allStatistics.length} statistics records, ${allPickers.length} pickers`;
+                    document.getElementById('fileInfo2').textContent = `✓ Loaded ${file.name} - ${allData.length} shipment records, ${allErrors.length} error records, ${allReceived.length} received records, ${allStatistics.length} statistics records, ${allPickers.length} pickers`;
                     updateDashboard();
+                    updateStatisticsMetrics();
                 } catch (error) {
                     const errorMsg = `❌ Error: ${error.message}`;
                     document.getElementById('fileInfo').textContent = errorMsg;
@@ -1389,6 +1532,165 @@
             });
         }
         
+        function updateStatisticsMetrics() {
+            if (!allStatistics || allStatistics.length === 0) {
+                return;
+            }
+            
+            // Calculate totals
+            let totalSqftTOR = 0;
+            let totalSqftCAL = 0;
+            let totalPalletsTOR = 0;
+            let totalPalletsCAL = 0;
+            
+            allStatistics.forEach(item => {
+                totalSqftTOR += (item.quantityTOR || 0) + (item.quantityQUATOR || 0) + (item.quantityCLAIMSTOR || 0);
+                totalSqftCAL += (item.quantityCAL || 0) + (item.quantityQUACAL || 0) + (item.quantityCLAIMSCAL || 0);
+                totalPalletsTOR += (item.palletCountTOR || 0);
+                totalPalletsCAL += (item.palletCountCAL || 0);
+            });
+            
+            // Update DOM elements
+            const sqftTORElement = document.getElementById('totalSqftTOR');
+            const palletsTORElement = document.getElementById('totalPalletsTOR');
+            const sqftCALElement = document.getElementById('totalSqftCAL');
+            const palletsCALElement = document.getElementById('totalPalletsCAL');
+            
+            if (sqftTORElement) sqftTORElement.textContent = Math.round(totalSqftTOR).toLocaleString();
+            if (palletsTORElement) palletsTORElement.textContent = Math.round(totalPalletsTOR).toLocaleString();
+            if (sqftCALElement) sqftCALElement.textContent = Math.round(totalSqftCAL).toLocaleString();
+            if (palletsCALElement) palletsCALElement.textContent = Math.round(totalPalletsCAL).toLocaleString();
+            
+            console.log('Statistics metrics updated - TOR ft²:', Math.round(totalSqftTOR), 'TOR Pallets:', Math.round(totalPalletsTOR), 
+                        'CAL ft²:', Math.round(totalSqftCAL), 'CAL Pallets:', Math.round(totalPalletsCAL));
+        }
+        
+        function openStatisticsModal(region, type) {
+            if (!allStatistics || allStatistics.length === 0) {
+                alert('No statistics data available');
+                return;
+            }
+            
+            // Prepare data based on type
+            let itemsData = [];
+            
+            if (type === 'sqft') {
+                // Calculate total ft² per item for the specified region
+                allStatistics.forEach(item => {
+                    let total = 0;
+                    let location1 = 0;
+                    let location2 = 0;
+                    let location3 = 0;
+                    
+                    if (region === 'TOR') {
+                        location1 = item.quantityTOR || 0;
+                        location2 = item.quantityQUATOR || 0;
+                        location3 = item.quantityCLAIMSTOR || 0;
+                    } else if (region === 'CAL') {
+                        location1 = item.quantityCAL || 0;
+                        location2 = item.quantityQUACAL || 0;
+                        location3 = item.quantityCLAIMSCAL || 0;
+                    }
+                    
+                    total = location1 + location2 + location3;
+                    
+                    if (total > 0) {
+                        itemsData.push({
+                            itemNo: item.itemNo,
+                            total: total,
+                            location1: location1,
+                            location2: location2,
+                            location3: location3
+                        });
+                    }
+                });
+                
+                // Sort by total descending and take top 10
+                itemsData.sort((a, b) => b.total - a.total);
+                itemsData = itemsData.slice(0, 10);
+                
+                // Build table
+                const locationNames = region === 'TOR' ? ['TOR', 'QUATOR', 'CLAIMSTOR'] : ['CAL', 'QUACAL', 'CLAIMSCAL'];
+                
+                document.getElementById('statsModalTitle').textContent = `Top 10 Items - Total ft² ${region}`;
+                
+                const thead = document.querySelector('#statsTable thead tr');
+                thead.innerHTML = `
+                    <th>Item No.</th>
+                    <th>${locationNames[0]}</th>
+                    <th>${locationNames[1]}</th>
+                    <th>${locationNames[2]}</th>
+                    <th>Total</th>
+                `;
+                
+                const tbody = document.querySelector('#statsTable tbody');
+                tbody.innerHTML = '';
+                
+                itemsData.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.itemNo}</td>
+                        <td>${Math.round(item.location1).toLocaleString()}</td>
+                        <td>${Math.round(item.location2).toLocaleString()}</td>
+                        <td>${Math.round(item.location3).toLocaleString()}</td>
+                        <td><strong>${Math.round(item.total).toLocaleString()}</strong></td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                
+            } else if (type === 'pallets') {
+                // Calculate total pallets per item for the specified region
+                allStatistics.forEach(item => {
+                    let total = 0;
+                    
+                    if (region === 'TOR') {
+                        total = item.palletCountTOR || 0;
+                    } else if (region === 'CAL') {
+                        total = item.palletCountCAL || 0;
+                    }
+                    
+                    if (total > 0) {
+                        itemsData.push({
+                            itemNo: item.itemNo,
+                            total: total
+                        });
+                    }
+                });
+                
+                // Sort by total descending and take top 10
+                itemsData.sort((a, b) => b.total - a.total);
+                itemsData = itemsData.slice(0, 10);
+                
+                // Build table
+                document.getElementById('statsModalTitle').textContent = `Top 10 Items - Total Pallets ${region}`;
+                
+                const thead = document.querySelector('#statsTable thead tr');
+                thead.innerHTML = `
+                    <th>Item No.</th>
+                    <th>Total Pallets</th>
+                `;
+                
+                const tbody = document.querySelector('#statsTable tbody');
+                tbody.innerHTML = '';
+                
+                itemsData.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.itemNo}</td>
+                        <td><strong>${Math.round(item.total).toLocaleString()}</strong></td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+            
+            // Show modal
+            document.getElementById('statisticsModal').style.display = 'flex';
+        }
+        
+        function closeStatisticsModal() {
+            document.getElementById('statisticsModal').style.display = 'none';
+        }
+        
         function updateCharts(data, rawData) {
             // Sort data alphabetically by name
             const sortedData = data.sort((a, b) => a.name.localeCompare(b.name));
@@ -1396,6 +1698,11 @@
             const boxes = sortedData.map(e => e.boxes);
             const pallets = sortedData.map(e => e.pallets);
             const errors = sortedData.map(e => e.errors);
+            
+            // Filter for errors chart - only show TTMs with errors > 0
+            const dataWithErrors = sortedData.filter(e => e.errors > 0);
+            const namesWithErrors = dataWithErrors.map(e => e.name);
+            const errorsFiltered = dataWithErrors.map(e => e.errors);
             
             // Destroy existing charts
             Object.values(charts).forEach(chart => chart.destroy());
@@ -1438,14 +1745,14 @@
                 }
             });
             
-            // Errors Chart
+            // Errors Chart - only show TTMs with errors > 0
             charts.errors = new Chart(document.getElementById('errorsChart'), {
                 type: 'bar',
                 data: {
-                    labels: names,
+                    labels: namesWithErrors,
                     datasets: [{
                         label: 'Errors',
-                        data: errors,
+                        data: errorsFiltered,
                         backgroundColor: '#ef4444',
                         borderRadius: 6
                     }]
@@ -1548,8 +1855,14 @@
             // Sort employee names alphabetically
             const sortedEmployeeNames = Object.keys(sqftByEmployee).sort((a, b) => a.localeCompare(b));
             
+            // Populate employee checkboxes if not already populated
+            populateEmployeeCheckboxes(sortedEmployeeNames);
+            
+            // Filter to only selected employees
+            const selectedEmployeeNames = sortedEmployeeNames.filter(name => selectedEmployees.has(name));
+            
             const colors = ['#3b82f6', '#a855f7', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
-            const sqftDatasets = sortedEmployeeNames.map((empName, idx) => {
+            const sqftDatasets = selectedEmployeeNames.map((empName, idx) => {
                 const empData = sqftByEmployee[empName];
                 const dataPoints = allDates.map(date => empData[date] || null);
                 
@@ -1765,12 +2078,61 @@
             
         }
         
+        function sortTable(column) {
+            // Toggle sort direction if same column
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = column;
+                currentSort.direction = 'asc';
+            }
+            
+            // Update sort indicators
+            document.querySelectorAll('th.sortable').forEach(th => {
+                th.classList.remove('active');
+                const indicator = th.querySelector('.sort-indicator');
+                if (indicator) indicator.textContent = '';
+            });
+            
+            const activeHeader = document.querySelector(`th.sortable[onclick*="${column}"]`);
+            if (activeHeader) {
+                activeHeader.classList.add('active');
+                const indicator = activeHeader.querySelector('.sort-indicator');
+                if (indicator) {
+                    indicator.textContent = currentSort.direction === 'asc' ? '▲' : '▼';
+                }
+            }
+            
+            // Re-render the table with current filters
+            updateDashboard();
+        }
+        
         function updateTable(data) {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
             
-            // Sort data alphabetically by name
-            const sortedData = data.sort((a, b) => a.name.localeCompare(b.name));
+            // Sort data based on current sort settings
+            const sortedData = [...data].sort((a, b) => {
+                let aVal = a[currentSort.column];
+                let bVal = b[currentSort.column];
+                
+                // Special handling for accuracy (which is stored as error rate)
+                if (currentSort.column === 'accuracy') {
+                    aVal = 100 - parseFloat(a.accuracy);
+                    bVal = 100 - parseFloat(b.accuracy);
+                }
+                
+                // Handle string vs number comparison
+                if (typeof aVal === 'string') {
+                    return currentSort.direction === 'asc' 
+                        ? aVal.localeCompare(bVal)
+                        : bVal.localeCompare(aVal);
+                } else {
+                    return currentSort.direction === 'asc' 
+                        ? aVal - bVal
+                        : bVal - aVal;
+                }
+            });
             
             sortedData.forEach(emp => {
                 const row = tbody.insertRow();
@@ -1991,9 +2353,19 @@
             
             const ttmNames = Object.keys(ttmData).sort((a, b) => a.localeCompare(b));
             
-            // If this is the first time or all TTMs were selected, select all
+            // If this is the first time, select only pickers (if available), otherwise select all
             if (selectedTTMs.size === 0) {
-                ttmNames.forEach(name => selectedTTMs.add(name));
+                if (allPickers && allPickers.length > 0) {
+                    // Pre-select only pickers
+                    ttmNames.forEach(name => {
+                        if (allPickers.includes(name)) {
+                            selectedTTMs.add(name);
+                        }
+                    });
+                } else {
+                    // No pickers data, select all
+                    ttmNames.forEach(name => selectedTTMs.add(name));
+                }
             }
             
             // Create checkboxes
@@ -2044,6 +2416,77 @@
                 selectedTTMs.delete(cb.value);
             });
             updateTTMChart();
+        }
+
+        function populateEmployeeCheckboxes(employeeNames) {
+            const container = document.getElementById('employeeCheckboxes');
+            
+            // Only populate once or when employee list changes
+            if (container.children.length > 0) {
+                return;
+            }
+            
+            // If this is the first time, select only pickers (if available), otherwise select all
+            if (selectedEmployees.size === 0) {
+                if (allPickers && allPickers.length > 0) {
+                    // Pre-select only pickers
+                    employeeNames.forEach(name => {
+                        if (allPickers.includes(name)) {
+                            selectedEmployees.add(name);
+                        }
+                    });
+                } else {
+                    // No pickers data, select all
+                    employeeNames.forEach(name => selectedEmployees.add(name));
+                }
+            }
+            
+            container.innerHTML = '';
+            
+            employeeNames.forEach(name => {
+                const div = document.createElement('div');
+                div.className = 'ttm-checkbox';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `emp-${name.replace(/\s+/g, '-')}`;
+                checkbox.value = name;
+                checkbox.checked = selectedEmployees.has(name);
+                checkbox.onchange = function() {
+                    if (this.checked) {
+                        selectedEmployees.add(name);
+                    } else {
+                        selectedEmployees.delete(name);
+                    }
+                    updateDashboard();
+                };
+                
+                const label = document.createElement('label');
+                label.htmlFor = checkbox.id;
+                label.textContent = name;
+                
+                div.appendChild(checkbox);
+                div.appendChild(label);
+                container.appendChild(div);
+            });
+        }
+
+        function selectAllEmployees() {
+            const checkboxes = document.querySelectorAll('#employeeCheckboxes input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                cb.checked = true;
+                selectedEmployees.add(cb.value);
+            });
+            updateDashboard();
+        }
+
+        function deselectAllEmployees() {
+            const checkboxes = document.querySelectorAll('#employeeCheckboxes input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+                selectedEmployees.delete(cb.value);
+            });
+            updateDashboard();
         }
 
         function updateAnalytics() {
